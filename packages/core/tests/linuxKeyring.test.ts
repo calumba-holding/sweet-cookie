@@ -11,31 +11,6 @@ function prependToPath(dir: string): void {
 	vi.stubEnv('PATH', parts.join(path.delimiter));
 }
 
-function writeShim(
-	binDir: string,
-	name: string,
-	options: { stdout?: string; stderr?: string; exitCode?: number } = {}
-): void {
-	mkdirSync(binDir, { recursive: true });
-
-	const shim = path.join(binDir, name);
-	const script = [
-		'#!/usr/bin/env node',
-		`process.stdout.write(${JSON.stringify(options.stdout ?? '')});`,
-		`process.stderr.write(${JSON.stringify(options.stderr ?? '')});`,
-		`process.exit(${options.exitCode ?? 0});`,
-	].join('\n');
-	writeFileSync(shim, script, { encoding: 'utf8' });
-	if (process.platform !== 'win32') chmodSync(shim, 0o755);
-
-	if (process.platform === 'win32') {
-		const cmd = path.join(binDir, `${name}.cmd`);
-		writeFileSync(cmd, ['@echo off', `node "%~dp0${name}" %*`].join('\r\n'), {
-			encoding: 'utf8',
-		});
-	}
-}
-
 /**
  * Creates a secret-tool shim that returns different passwords based on arguments.
  * This simulates the GNOME keyring behavior where different lookup methods return different results.

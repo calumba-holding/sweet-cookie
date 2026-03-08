@@ -46,11 +46,9 @@ export async function getLinuxChromiumSafeStoragePassword(options: {
 		//
 		// Try the classic service/account lookup first, then fall back to application
 		// (which will use either "chrome" or "msedge" depending on options.app).
-		let res = await execCapture(
-			'secret-tool',
-			['lookup', 'service', service, 'account', account],
-			{ timeoutMs: 3_000 }
-		);
+		let res = await execCapture('secret-tool', ['lookup', 'service', service, 'account', account], {
+			timeoutMs: 3_000,
+		});
 		if (res.code === 0 && res.stdout.trim()) return { password: res.stdout.trim(), warnings };
 
 		// Fallback: try application-based lookup (chrome_libsecret_os_crypt_password_v2 schema)
