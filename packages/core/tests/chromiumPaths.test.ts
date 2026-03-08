@@ -1,5 +1,5 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,11 +23,9 @@ describe("chromium path helpers", () => {
 		const file = path.join(dir, "Cookies");
 		writeFileSync(file, "", "utf8");
 
-		vi.stubEnv("HOME", dir);
-
 		expect(looksLikePath("Default")).toBe(false);
 		expect(looksLikePath("Profile 1/Cookies")).toBe(true);
-		expect(expandPath("~/Library")).toBe(path.join(dir, "Library"));
+		expect(expandPath("~/Library")).toBe(path.join(homedir(), "Library"));
 		expect(expandPath(file)).toBe(file);
 		expect(safeStat(file)?.isFile()).toBe(true);
 		expect(safeStat(path.join(dir, "missing"))).toBeNull();
