@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-03-08
+
 ### Fixed
 
 - Add explicit macOS `chromiumBrowser` targeting so callers can pick a specific Chromium-family browser without changing default Chrome behavior. (`#2`, thanks `@ainergiz`)
