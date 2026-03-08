@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Respect `timeoutMs` for macOS Chrome Keychain access so slow or interactive prompts can use the caller-provided timeout. (`#9`, thanks `@natustx`)
+- Fall back to GNOME `application=` keyring lookups for Chrome and Edge when the legacy `service`/`account` lookup is empty. (`#13`, thanks `@Clausinho`)
+- Drop Firefox cookie expiries beyond year 9999 instead of emitting invalid downstream timestamps. (`#22`, thanks `@WinnCook`)
+- Cast Chromium `expires_utc` to text on runtimes without `readBigInts` support to avoid `node:sqlite` overflow failures. (`#3`, thanks `@Saik0s`)
+
 ## 0.1.0 - 2025-12-28
 
 Initial release.
