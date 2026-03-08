@@ -5,6 +5,7 @@ Inline-first browser cookie extraction for local tooling (no native addons).
 Supports:
 - Inline payloads (JSON / base64 / file) — most reliable path.
 - Local browser reads (best effort): Chrome, Edge, Firefox, Safari (macOS).
+- On macOS, the `chrome` backend checks Chrome and Brave roots by default.
 
 Install:
 ```bash
@@ -33,5 +34,10 @@ await getCookies({
   chromiumBrowser: 'brave',
 });
 ```
+
+Notes:
+- `chromiumBrowser` pins the macOS `chrome` backend to `chrome`, `brave`, `arc`, or `chromium`.
+- Inline payloads win first; otherwise local backends run in declared order.
+- On Linux, Chromium safe-storage overrides also support `SWEET_COOKIE_BRAVE_SAFE_STORAGE_PASSWORD`.
 
 Docs + extension exporter: see the repo root README.

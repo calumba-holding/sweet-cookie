@@ -111,11 +111,13 @@ await getCookies({
 });
 ```
 
+If any inline source yields cookies, Sweet Cookie returns that result immediately and skips local browser reads.
+
 ## Supported browsers / platforms
 
 - `chrome` (Chromium-based): macOS / Windows / Linux
   - Default discovery targets Google Chrome paths.
-  - On macOS, `chromiumBrowser` can explicitly target `chrome`, `brave`, `arc`, or `chromium`.
+  - On macOS, the default `chrome` backend checks Google Chrome and Brave roots. `chromiumBrowser` can pin `chrome`, `brave`, `arc`, or `chromium`.
   - Other Chromium browsers typically work by passing `chromeProfile` as an explicit `Cookies` DB path.
   - Only supports modern Chromium cookie DB schemas (roughly Chrome `>=100`).
 - `edge` (Chromium-based): macOS / Windows / Linux
@@ -132,7 +134,7 @@ await getCookies({
 - `browsers`: source order (`chrome`, `edge`, `firefox`, `safari`).
 - `mode`: `merge` (default) or `first`.
 - `chromeProfile`: Chrome profile name/path (profile dir or `Cookies` DB file).
-- `chromiumBrowser`: macOS-only explicit Chromium-family target for the `chrome` backend.
+- `chromiumBrowser`: macOS-only explicit Chromium-family target for the `chrome` backend (`chrome|brave|arc|chromium`).
 - `edgeProfile`: Edge profile name/path (profile dir or `Cookies` DB file).
 - `firefoxProfile`: Firefox profile name/path.
 - `safariCookiesFile`: override path to `Cookies.binarycookies` (tests/debug).
@@ -143,10 +145,11 @@ await getCookies({
 
 ## Env
 
-- `SWEET_COOKIE_BROWSERS` / `SWEET_COOKIE_SOURCES`: `chrome,safari,firefox`
+- `SWEET_COOKIE_BROWSERS` / `SWEET_COOKIE_SOURCES`: `chrome,edge,safari,firefox`
 - `SWEET_COOKIE_MODE`: `merge|first`
 - `SWEET_COOKIE_CHROME_PROFILE`, `SWEET_COOKIE_EDGE_PROFILE`, `SWEET_COOKIE_FIREFOX_PROFILE`
-- Linux-only: `SWEET_COOKIE_LINUX_KEYRING=gnome|kwallet|basic`, `SWEET_COOKIE_CHROME_SAFE_STORAGE_PASSWORD=...`, `SWEET_COOKIE_EDGE_SAFE_STORAGE_PASSWORD=...`
+- `SWEET_COOKIE_EDGE_PROFILE` falls back to `SWEET_COOKIE_CHROME_PROFILE` when unset
+- Linux-only: `SWEET_COOKIE_LINUX_KEYRING=gnome|kwallet|basic`, `SWEET_COOKIE_CHROME_SAFE_STORAGE_PASSWORD=...`, `SWEET_COOKIE_EDGE_SAFE_STORAGE_PASSWORD=...`, `SWEET_COOKIE_BRAVE_SAFE_STORAGE_PASSWORD=...`
 
 ## Inline cookie payload format
 

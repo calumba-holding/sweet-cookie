@@ -30,25 +30,36 @@ High-signal options:
 - `url`: primary target URL (host drives filtering)
 - `origins`: extra origins (OAuth, multi-domain auth)
 - `names`: allowlist cookie names
-- `browsers`: ordered sources (`chrome|safari|firefox`)
+- `browsers`: ordered sources (`chrome|edge|safari|firefox`)
 - `mode`: `merge` (default) or `first`
 - `profile` / `chromeProfile`: Chrome profile name/path
+- `chromiumBrowser`: macOS-only explicit `chrome|brave|arc|chromium` target for the `chrome` backend
+- `edgeProfile`: Edge profile name/path
 - `firefoxProfile`: Firefox profile name/path
+- `safariCookiesFile`: override path to `Cookies.binarycookies`
+- `timeoutMs`: timeout for OS helpers (keychain/keyring/DPAPI)
+- `debug`: extra provider warnings (never raw values)
 - `includeExpired`: include expired cookies
 - Inline inputs (escape hatch):
   - `inlineCookiesJson`, `inlineCookiesBase64`, `inlineCookiesFile`
 
 ### Provider order
 
-1) Inline sources (if any). First non-empty wins.
+1) Inline sources (if any). First non-empty wins; local browsers are skipped once inline yields cookies.
 2) Local browsers in declared order:
    - **Chrome**
      - copy DB → query via `node:sqlite` (Node) or `bun:sqlite` (Bun)
+     - macOS default discovery checks Google Chrome and Brave roots; `chromiumBrowser` can pin Chrome, Brave, Arc, or Chromium explicitly
      - decrypt:
        - macOS: Keychain `security` (Chrome Safe Storage)
        - Windows: DPAPI unwrap (Local State) + AES-GCM
-      - Linux: v10 (peanuts) + v11 (keyring via `secret-tool` or `kwallet-query` + `dbus-send`)
+       - Linux: v10 (peanuts) + v11 (keyring via `secret-tool` or `kwallet-query` + `dbus-send`)
+     - Linux safe-storage overrides support Chrome, Edge, and Brave env passwords
      - app-bound cookies: expect failures; prefer inline/export
+   - **Edge**
+     - copy DB → query via `node:sqlite` (Node) or `bun:sqlite` (Bun)
+     - `edgeProfile` falls back to `SWEET_COOKIE_CHROME_PROFILE` when `SWEET_COOKIE_EDGE_PROFILE` is unset
+     - decrypt follows the Chromium path for the current OS
    - **Firefox**
      - Bun: `bun:sqlite`
      - Node: `node:sqlite`
@@ -69,8 +80,8 @@ High-signal options:
 ### 1) JSON (preferred)
 
 Export a JSON file containing:
+- top-level metadata: `version`, `generatedAt`, `source`, `browser`, `targetUrl`, `origins`
 - `cookies`: array of cookie objects compatible with common “CDP-ish” shapes
-- `meta`: versioning + provenance
 
 Example shape:
 ```json

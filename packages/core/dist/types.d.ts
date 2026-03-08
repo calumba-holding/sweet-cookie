@@ -3,7 +3,7 @@
  *
  * Notes:
  * - `safari` is macOS-only.
- * - `chrome` targets Google Chrome paths by default.
+ * - `chrome` targets Google Chrome paths by default; on macOS the default lookup also checks Brave roots.
  * - `edge` targets Microsoft Edge paths by default.
  * - Other Chromium browsers often work by passing an explicit cookie DB path via `chromeProfile`
  *   (or `edgeProfile` if you want to keep sources separate).
@@ -88,7 +88,8 @@ export interface GetCookiesOptions {
     safariCookiesFile?: string;
     /**
      * Specific Chromium browser to target on macOS.
-     * When set, only that browser's keychain entry will be tried (avoids multiple password prompts).
+     * When set, only that browser's keychain entry/root will be tried (avoids multiple password prompts).
+     * When omitted, the macOS `chrome` backend checks Chrome and Brave roots by default.
      * Only used when `browsers` includes 'chrome'.
      */
     chromiumBrowser?: 'chrome' | 'brave' | 'arc' | 'chromium';
