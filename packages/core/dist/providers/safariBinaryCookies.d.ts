@@ -1,4 +1,4 @@
-import type { GetCookiesResult } from '../types.js';
+import type { GetCookiesResult } from "../types.js";
 export declare function getCookiesFromSafari(options: {
     includeExpired?: boolean;
     file?: string;

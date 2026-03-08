@@ -1,5 +1,5 @@
-import type { GetCookiesResult } from '../types.js';
-import type { ChromiumBrowserId } from './chromeSqliteMac.js';
+import type { GetCookiesResult } from "../types.js";
+import type { ChromiumBrowserId } from "./chromeSqliteMac.js";
 export declare function getCookiesFromChrome(options: {
     profile?: string;
     timeoutMs?: number;

@@ -1,18 +1,18 @@
-import { getCookiesFromChrome } from './providers/chrome.js';
-import { getCookiesFromEdge } from './providers/edge.js';
-import { getCookiesFromFirefox } from './providers/firefoxSqlite.js';
-import { getCookiesFromInline } from './providers/inline.js';
-import { getCookiesFromSafari } from './providers/safariBinaryCookies.js';
+import { getCookiesFromChrome } from "./providers/chrome.js";
+import { getCookiesFromEdge } from "./providers/edge.js";
+import { getCookiesFromFirefox } from "./providers/firefoxSqlite.js";
+import { getCookiesFromInline } from "./providers/inline.js";
+import { getCookiesFromSafari } from "./providers/safariBinaryCookies.js";
 import type {
 	BrowserName,
 	Cookie,
 	CookieHeaderOptions,
 	GetCookiesOptions,
 	GetCookiesResult,
-} from './types.js';
-import { normalizeOrigins } from './util/origins.js';
+} from "./types.js";
+import { normalizeOrigins } from "./util/origins.js";
 
-const DEFAULT_BROWSERS: BrowserName[] = ['chrome', 'safari', 'firefox'];
+const DEFAULT_BROWSERS: BrowserName[] = ["chrome", "safari", "firefox"];
 
 /**
  * Read cookies for a URL from one or more browser backends (and/or inline payloads).
@@ -41,7 +41,7 @@ export async function getCookies(options: GetCookiesOptions): Promise<GetCookies
 	} else {
 		browsers = parseBrowsersEnv() ?? DEFAULT_BROWSERS;
 	}
-	const mode = options.mode ?? parseModeEnv() ?? 'merge';
+	const mode = options.mode ?? parseModeEnv() ?? "merge";
 
 	const inlineSources = await resolveInlineSources(options);
 	// Inline sources are the most reliable path (they bypass DB locks + keychain prompts).
@@ -57,8 +57,8 @@ export async function getCookies(options: GetCookiesOptions): Promise<GetCookies
 	const merged = new Map<string, Cookie>();
 	const tryAdd = (cookie: Cookie) => {
 		// Dedupe by name+domain+path (a common stable identity for HTTP cookies).
-		const domain = cookie.domain ?? '';
-		const pathValue = cookie.path ?? '';
+		const domain = cookie.domain ?? "";
+		const pathValue = cookie.path ?? "";
 		const key = `${cookie.name}|${domain}|${pathValue}`;
 		if (!merged.has(key)) {
 			merged.set(key, cookie);
@@ -67,52 +67,74 @@ export async function getCookies(options: GetCookiesOptions): Promise<GetCookies
 
 	for (const browser of browsers) {
 		let result: GetCookiesResult;
-		if (browser === 'chrome') {
+		if (browser === "chrome") {
 			const chromeOptions: Parameters<typeof getCookiesFromChrome>[0] = {};
 			const chromeProfile =
-				options.chromeProfile ?? options.profile ?? readEnv('SWEET_COOKIE_CHROME_PROFILE');
-			if (chromeProfile) chromeOptions.profile = chromeProfile;
-			if (options.timeoutMs !== undefined) chromeOptions.timeoutMs = options.timeoutMs;
-			if (options.includeExpired !== undefined)
+				options.chromeProfile ?? options.profile ?? readEnv("SWEET_COOKIE_CHROME_PROFILE");
+			if (chromeProfile) {
+				chromeOptions.profile = chromeProfile;
+			}
+			if (options.timeoutMs !== undefined) {
+				chromeOptions.timeoutMs = options.timeoutMs;
+			}
+			if (options.includeExpired !== undefined) {
 				chromeOptions.includeExpired = options.includeExpired;
-			if (options.debug !== undefined) chromeOptions.debug = options.debug;
-			if (options.chromiumBrowser !== undefined)
+			}
+			if (options.debug !== undefined) {
+				chromeOptions.debug = options.debug;
+			}
+			if (options.chromiumBrowser !== undefined) {
 				chromeOptions.chromiumBrowser = options.chromiumBrowser;
+			}
 
 			result = await getCookiesFromChrome(chromeOptions, origins, names);
-		} else if (browser === 'edge') {
+		} else if (browser === "edge") {
 			const edgeOptions: Parameters<typeof getCookiesFromEdge>[0] = {};
 			const edgeProfile =
 				options.edgeProfile ??
 				options.profile ??
-				readEnv('SWEET_COOKIE_EDGE_PROFILE') ??
-				readEnv('SWEET_COOKIE_CHROME_PROFILE');
-			if (edgeProfile) edgeOptions.profile = edgeProfile;
-			if (options.timeoutMs !== undefined) edgeOptions.timeoutMs = options.timeoutMs;
-			if (options.includeExpired !== undefined) edgeOptions.includeExpired = options.includeExpired;
-			if (options.debug !== undefined) edgeOptions.debug = options.debug;
+				readEnv("SWEET_COOKIE_EDGE_PROFILE") ??
+				readEnv("SWEET_COOKIE_CHROME_PROFILE");
+			if (edgeProfile) {
+				edgeOptions.profile = edgeProfile;
+			}
+			if (options.timeoutMs !== undefined) {
+				edgeOptions.timeoutMs = options.timeoutMs;
+			}
+			if (options.includeExpired !== undefined) {
+				edgeOptions.includeExpired = options.includeExpired;
+			}
+			if (options.debug !== undefined) {
+				edgeOptions.debug = options.debug;
+			}
 
 			result = await getCookiesFromEdge(edgeOptions, origins, names);
-		} else if (browser === 'firefox') {
+		} else if (browser === "firefox") {
 			const firefoxOptions: Parameters<typeof getCookiesFromFirefox>[0] = {};
-			const firefoxProfile = options.firefoxProfile ?? readEnv('SWEET_COOKIE_FIREFOX_PROFILE');
-			if (firefoxProfile) firefoxOptions.profile = firefoxProfile;
-			if (options.includeExpired !== undefined)
+			const firefoxProfile = options.firefoxProfile ?? readEnv("SWEET_COOKIE_FIREFOX_PROFILE");
+			if (firefoxProfile) {
+				firefoxOptions.profile = firefoxProfile;
+			}
+			if (options.includeExpired !== undefined) {
 				firefoxOptions.includeExpired = options.includeExpired;
+			}
 
 			result = await getCookiesFromFirefox(firefoxOptions, origins, names);
 		} else {
 			const safariOptions: Parameters<typeof getCookiesFromSafari>[0] = {};
-			if (options.includeExpired !== undefined)
+			if (options.includeExpired !== undefined) {
 				safariOptions.includeExpired = options.includeExpired;
-			if (options.safariCookiesFile) safariOptions.file = options.safariCookiesFile;
+			}
+			if (options.safariCookiesFile) {
+				safariOptions.file = options.safariCookiesFile;
+			}
 
 			result = await getCookiesFromSafari(safariOptions, origins, names);
 		}
 
 		warnings.push(...result.warnings);
 
-		if (mode === 'first' && result.cookies.length) {
+		if (mode === "first" && result.cookies.length) {
 			// "first" returns the first backend that produced anything (plus accumulated warnings).
 			return { cookies: result.cookies, warnings };
 		}
@@ -133,84 +155,98 @@ export async function getCookies(options: GetCookiesOptions): Promise<GetCookies
  */
 export function toCookieHeader(
 	cookies: readonly Cookie[],
-	options: CookieHeaderOptions = {}
+	options: CookieHeaderOptions = {},
 ): string {
-	const sort = options.sort ?? 'name';
+	const sort = options.sort ?? "name";
 	const dedupeByName = options.dedupeByName ?? false;
 
 	const items = cookies
-		.filter((cookie) => cookie?.name && typeof cookie.value === 'string')
+		.filter((cookie) => cookie?.name && typeof cookie.value === "string")
 		.map((cookie) => ({ name: cookie.name, value: cookie.value }));
 
 	const ordered =
-		sort === 'name' ? items.slice().sort((a, b) => a.name.localeCompare(b.name)) : items;
+		sort === "name" ? items.slice().sort((a, b) => a.name.localeCompare(b.name)) : items;
 
 	if (!dedupeByName) {
-		return ordered.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+		return ordered.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 	}
 
 	const seen = new Set<string>();
 	const deduped: { name: string; value: string }[] = [];
 	for (const cookie of ordered) {
 		const key = cookie.name;
-		if (seen.has(key)) continue;
+		if (seen.has(key)) {
+			continue;
+		}
 		seen.add(key);
 		deduped.push(cookie);
 	}
 
-	return deduped.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+	return deduped.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 }
 
 function normalizeNames(names?: string[]): Set<string> | null {
-	if (!names?.length) return null;
+	if (!names?.length) {
+		return null;
+	}
 	const cleaned = names.map((n) => n.trim()).filter(Boolean);
-	if (!cleaned.length) return null;
+	if (!cleaned.length) {
+		return null;
+	}
 	return new Set(cleaned);
 }
 
 async function resolveInlineSources(
-	options: GetCookiesOptions
+	options: GetCookiesOptions,
 ): Promise<Array<{ source: string; payload: string }>> {
 	const sources: Array<{ source: string; payload: string }> = [];
 	if (options.inlineCookiesJson) {
-		sources.push({ source: 'inline-json', payload: options.inlineCookiesJson });
+		sources.push({ source: "inline-json", payload: options.inlineCookiesJson });
 	}
 	if (options.inlineCookiesBase64) {
-		sources.push({ source: 'inline-base64', payload: options.inlineCookiesBase64 });
+		sources.push({ source: "inline-base64", payload: options.inlineCookiesBase64 });
 	}
 	if (options.inlineCookiesFile) {
-		sources.push({ source: 'inline-file', payload: options.inlineCookiesFile });
+		sources.push({ source: "inline-file", payload: options.inlineCookiesFile });
 	}
 
 	return sources;
 }
 
-function parseBrowsersEnv(): GetCookiesOptions['browsers'] | undefined {
-	const raw = readEnv('SWEET_COOKIE_BROWSERS') ?? readEnv('SWEET_COOKIE_SOURCES');
-	if (!raw) return undefined;
+function parseBrowsersEnv(): GetCookiesOptions["browsers"] | undefined {
+	const raw = readEnv("SWEET_COOKIE_BROWSERS") ?? readEnv("SWEET_COOKIE_SOURCES");
+	if (!raw) {
+		return undefined;
+	}
 	const tokens = raw
 		.split(/[,\s]+/)
 		.map((t) => t.trim().toLowerCase())
 		.filter(Boolean);
-	const out: Array<'chrome' | 'edge' | 'firefox' | 'safari'> = [];
+	const out: Array<"chrome" | "edge" | "firefox" | "safari"> = [];
 	for (const token of tokens) {
-		if (token === 'chrome' || token === 'edge' || token === 'firefox' || token === 'safari') {
-			if (!out.includes(token)) out.push(token);
+		if (token === "chrome" || token === "edge" || token === "firefox" || token === "safari") {
+			if (!out.includes(token)) {
+				out.push(token);
+			}
 		}
 	}
 	return out.length ? out : undefined;
 }
 
-function parseModeEnv(): GetCookiesOptions['mode'] | undefined {
-	const raw = readEnv('SWEET_COOKIE_MODE');
-	if (!raw) return undefined;
+function parseModeEnv(): GetCookiesOptions["mode"] | undefined {
+	const raw = readEnv("SWEET_COOKIE_MODE");
+	if (!raw) {
+		return undefined;
+	}
 	const normalized = raw.trim().toLowerCase();
-	if (normalized === 'merge' || normalized === 'first') return normalized;
+	if (normalized === "merge" || normalized === "first") {
+		return normalized;
+	}
 	return undefined;
 }
 
 function readEnv(key: string): string | undefined {
 	const value = process.env[key];
-	const trimmed = typeof value === 'string' ? value.trim() : '';
+	const trimmed = typeof value === "string" ? value.trim() : "";
 	return trimmed.length ? trimmed : undefined;
 }

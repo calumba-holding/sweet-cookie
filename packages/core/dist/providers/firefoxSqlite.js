@@ -1,22 +1,22 @@
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
-import path from 'node:path';
-import { hostMatchesCookieDomain } from '../util/hostMatch.js';
-import { importNodeSqlite } from '../util/nodeSqlite.js';
-import { isBunRuntime } from '../util/runtime.js';
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import path from "node:path";
+import { hostMatchesCookieDomain } from "../util/hostMatch.js";
+import { importNodeSqlite } from "../util/nodeSqlite.js";
+import { isBunRuntime } from "../util/runtime.js";
 export async function getCookiesFromFirefox(options, origins, allowlistNames) {
     const warnings = [];
     const dbPath = resolveFirefoxCookiesDb(options.profile);
     if (!dbPath) {
-        warnings.push('Firefox cookies database not found.');
+        warnings.push("Firefox cookies database not found.");
         return { cookies: [], warnings };
     }
-    const tempDir = mkdtempSync(path.join(tmpdir(), 'sweet-cookie-firefox-'));
-    const tempDbPath = path.join(tempDir, 'cookies.sqlite');
+    const tempDir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-firefox-"));
+    const tempDbPath = path.join(tempDir, "cookies.sqlite");
     try {
         copyFileSync(dbPath, tempDbPath);
-        copySidecar(dbPath, `${tempDbPath}-wal`, '-wal');
-        copySidecar(dbPath, `${tempDbPath}-shm`, '-shm');
+        copySidecar(dbPath, `${tempDbPath}-wal`, "-wal");
+        copySidecar(dbPath, `${tempDbPath}-shm`, "-shm");
     }
     catch (error) {
         rmSync(tempDir, { recursive: true, force: true });
@@ -26,7 +26,7 @@ export async function getCookiesFromFirefox(options, origins, allowlistNames) {
     const hosts = origins.map((o) => new URL(o).hostname);
     const now = Math.floor(Date.now() / 1000);
     const where = buildHostWhereClause(hosts);
-    const expiryClause = options.includeExpired ? '' : ` AND (expiry = 0 OR expiry > ${now})`;
+    const expiryClause = options.includeExpired ? "" : ` AND (expiry = 0 OR expiry > ${now})`;
     const sql = `SELECT name, value, host, path, expiry, isSecure, isHttpOnly, sameSite ` +
         `FROM moz_cookies WHERE (${where})${expiryClause} ORDER BY expiry DESC;`;
     try {
@@ -69,7 +69,7 @@ async function queryFirefoxCookiesWithNodeSqlite(dbPath, sql) {
 }
 async function queryFirefoxCookiesWithBunSqlite(dbPath, sql) {
     try {
-        const { Database } = await import('bun:sqlite');
+        const { Database } = await import("bun:sqlite");
         const db = new Database(dbPath, { readonly: true });
         try {
             const rows = db.query(sql).all();
@@ -87,46 +87,53 @@ function collectFirefoxCookiesFromRows(rows, options, hosts, allowlistNames) {
     const now = Math.floor(Date.now() / 1000);
     const cookies = [];
     for (const row of rows) {
-        const name = typeof row.name === 'string' ? row.name : null;
-        const value = typeof row.value === 'string' ? row.value : null;
-        const host = typeof row.host === 'string' ? row.host : null;
-        const cookiePath = typeof row.path === 'string' ? row.path : '';
-        if (!name || value === null || !host)
+        const name = typeof row.name === "string" ? row.name : null;
+        const value = typeof row.value === "string" ? row.value : null;
+        const host = typeof row.host === "string" ? row.host : null;
+        const cookiePath = typeof row.path === "string" ? row.path : "";
+        if (!name || value === null || !host) {
             continue;
-        if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(name))
+        }
+        if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(name)) {
             continue;
-        if (!hostMatchesAny(hosts, host))
+        }
+        if (!hostMatchesAny(hosts, host)) {
             continue;
-        const expiryText = typeof row.expiry === 'number'
+        }
+        const expiryText = typeof row.expiry === "number"
             ? String(row.expiry)
-            : typeof row.expiry === 'string'
+            : typeof row.expiry === "string"
                 ? row.expiry
                 : undefined;
         const expires = normalizeFirefoxExpiry(expiryText);
-        if (!options.includeExpired && expires && expires < now)
+        if (!options.includeExpired && expires && expires < now) {
             continue;
-        const isSecure = row.isSecure === 1 || row.isSecure === '1' || row.isSecure === true;
-        const isHttpOnly = row.isHttpOnly === 1 || row.isHttpOnly === '1' || row.isHttpOnly === true;
+        }
+        const isSecure = row.isSecure === 1 || row.isSecure === "1" || row.isSecure === true;
+        const isHttpOnly = row.isHttpOnly === 1 || row.isHttpOnly === "1" || row.isHttpOnly === true;
         const cookie = {
             name,
             value,
-            domain: host.startsWith('.') ? host.slice(1) : host,
-            path: cookiePath || '/',
+            domain: host.startsWith(".") ? host.slice(1) : host,
+            path: cookiePath || "/",
             secure: isSecure,
             httpOnly: isHttpOnly,
         };
-        if (expires !== undefined)
+        if (expires !== undefined) {
             cookie.expires = expires;
-        const normalizedSameSite = normalizeFirefoxSameSite(typeof row.sameSite === 'number'
+        }
+        const normalizedSameSite = normalizeFirefoxSameSite(typeof row.sameSite === "number"
             ? String(row.sameSite)
-            : typeof row.sameSite === 'string'
+            : typeof row.sameSite === "string"
                 ? row.sameSite
                 : undefined);
-        if (normalizedSameSite !== undefined)
+        if (normalizedSameSite !== undefined) {
             cookie.sameSite = normalizedSameSite;
-        const source = { browser: 'firefox' };
-        if (options.profile)
+        }
+        const source = { browser: "firefox" };
+        if (options.profile) {
             source.profile = options.profile;
+        }
         cookie.source = source;
         cookies.push(cookie);
     }
@@ -134,41 +141,44 @@ function collectFirefoxCookiesFromRows(rows, options, hosts, allowlistNames) {
 }
 function resolveFirefoxCookiesDb(profile) {
     const home = homedir();
-    // biome-ignore lint/complexity/useLiteralKeys: process.env is an index signature under strict TS.
-    const appData = process.env['APPDATA'];
+    const appData = process.env["APPDATA"];
     /* c8 ignore next 10 */
-    const roots = process.platform === 'darwin'
-        ? [path.join(home, 'Library', 'Application Support', 'Firefox', 'Profiles')]
-        : process.platform === 'linux'
-            ? [path.join(home, '.mozilla', 'firefox')]
-            : process.platform === 'win32'
+    const roots = process.platform === "darwin"
+        ? [path.join(home, "Library", "Application Support", "Firefox", "Profiles")]
+        : process.platform === "linux"
+            ? [path.join(home, ".mozilla", "firefox")]
+            : process.platform === "win32"
                 ? appData
-                    ? [path.join(appData, 'Mozilla', 'Firefox', 'Profiles')]
+                    ? [path.join(appData, "Mozilla", "Firefox", "Profiles")]
                     : []
                 : [];
     if (profile && looksLikePath(profile)) {
-        const candidate = profile.endsWith('cookies.sqlite')
+        const candidate = profile.endsWith("cookies.sqlite")
             ? profile
-            : path.join(profile, 'cookies.sqlite');
+            : path.join(profile, "cookies.sqlite");
         return existsSync(candidate) ? candidate : null;
     }
     for (const root of roots) {
-        if (!root || !existsSync(root))
+        if (!root || !existsSync(root)) {
             continue;
+        }
         if (profile) {
-            const candidate = path.join(root, profile, 'cookies.sqlite');
-            if (existsSync(candidate))
+            const candidate = path.join(root, profile, "cookies.sqlite");
+            if (existsSync(candidate)) {
                 return candidate;
+            }
             continue;
         }
         const entries = safeReaddir(root);
-        const defaultRelease = entries.find((e) => e.includes('default-release'));
+        const defaultRelease = entries.find((e) => e.includes("default-release"));
         const picked = defaultRelease ?? entries[0];
-        if (!picked)
+        if (!picked) {
             continue;
-        const candidate = path.join(root, picked, 'cookies.sqlite');
-        if (existsSync(candidate))
+        }
+        const candidate = path.join(root, picked, "cookies.sqlite");
+        if (existsSync(candidate)) {
             return candidate;
+        }
     }
     return null;
 }
@@ -183,12 +193,13 @@ function safeReaddir(dir) {
     }
 }
 function looksLikePath(value) {
-    return value.includes('/') || value.includes('\\');
+    return value.includes("/") || value.includes("\\");
 }
 function copySidecar(sourceDbPath, target, suffix) {
     const sidecar = `${sourceDbPath}${suffix}`;
-    if (!existsSync(sidecar))
+    if (!existsSync(sidecar)) {
         return;
+    }
     try {
         copyFileSync(sidecar, target);
     }
@@ -206,55 +217,66 @@ function buildHostWhereClause(hosts) {
         clauses.push(`host = ${escapedDot}`);
         clauses.push(`host LIKE ${escapedLike}`);
     }
-    return clauses.length ? clauses.join(' OR ') : '1=0';
+    return clauses.length ? clauses.join(" OR ") : "1=0";
 }
 function sqlLiteral(value) {
     const escaped = value.replaceAll("'", "''");
     return `'${escaped}'`;
 }
 function normalizeFirefoxExpiry(expiry) {
-    if (!expiry)
+    if (!expiry) {
         return undefined;
+    }
     const value = Number.parseInt(expiry, 10);
-    if (!Number.isFinite(value) || value <= 0)
+    if (!Number.isFinite(value) || value <= 0) {
         return undefined;
+    }
     // Downstream consumers commonly marshal cookie expiries into conventional time types
     // that cap out at year 9999 (253402300799 Unix seconds).
-    if (value > 253_402_300_799)
+    if (value > 253_402_300_799) {
         return undefined;
+    }
     return value;
 }
 function normalizeFirefoxSameSite(raw) {
-    if (!raw)
+    if (!raw) {
         return undefined;
+    }
     const value = Number.parseInt(raw, 10);
     if (Number.isFinite(value)) {
-        if (value === 2)
-            return 'Strict';
-        if (value === 1)
-            return 'Lax';
-        if (value === 0)
-            return 'None';
+        if (value === 2) {
+            return "Strict";
+        }
+        if (value === 1) {
+            return "Lax";
+        }
+        if (value === 0) {
+            return "None";
+        }
     }
     const normalized = raw.toLowerCase();
-    if (normalized === 'strict')
-        return 'Strict';
-    if (normalized === 'lax')
-        return 'Lax';
-    if (normalized === 'none')
-        return 'None';
+    if (normalized === "strict") {
+        return "Strict";
+    }
+    if (normalized === "lax") {
+        return "Lax";
+    }
+    if (normalized === "none") {
+        return "None";
+    }
     return undefined;
 }
 function hostMatchesAny(hosts, cookieHost) {
-    const cookieDomain = cookieHost.startsWith('.') ? cookieHost.slice(1) : cookieHost;
+    const cookieDomain = cookieHost.startsWith(".") ? cookieHost.slice(1) : cookieHost;
     return hosts.some((host) => hostMatchesCookieDomain(host, cookieDomain));
 }
 function dedupeCookies(cookies) {
     const merged = new Map();
     for (const cookie of cookies) {
-        const key = `${cookie.name}|${cookie.domain ?? ''}|${cookie.path ?? ''}`;
-        if (!merged.has(key))
+        const key = `${cookie.name}|${cookie.domain ?? ""}|${cookie.path ?? ""}`;
+        if (!merged.has(key)) {
             merged.set(key, cookie);
+        }
     }
     return Array.from(merged.values());
 }

@@ -1,4 +1,4 @@
-declare module 'bun:sqlite' {
+declare module "bun:sqlite" {
 	export type BunSqliteDatabaseOptions = {
 		readonly?: boolean;
 	};

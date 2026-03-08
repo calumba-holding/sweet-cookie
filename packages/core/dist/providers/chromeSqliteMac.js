@@ -1,52 +1,52 @@
-import { homedir } from 'node:os';
-import path from 'node:path';
-import { decryptChromiumAes128CbcCookieValue, deriveAes128CbcKeyFromPassword, } from './chromeSqlite/crypto.js';
-import { getCookiesFromChromeSqliteDb } from './chromeSqlite/shared.js';
-import { readKeychainGenericPasswordFirst } from './chromium/macosKeychain.js';
-import { resolveCookiesDbFromProfileOrRoots } from './chromium/paths.js';
+import { homedir } from "node:os";
+import path from "node:path";
+import { decryptChromiumAes128CbcCookieValue, deriveAes128CbcKeyFromPassword, } from "./chromeSqlite/crypto.js";
+import { getCookiesFromChromeSqliteDb } from "./chromeSqlite/shared.js";
+import { readKeychainGenericPasswordFirst } from "./chromium/macosKeychain.js";
+import { resolveCookiesDbFromProfileOrRoots } from "./chromium/paths.js";
 const DEFAULT_CHROMIUM_KEYCHAIN = {
-    account: 'Chrome',
-    services: ['Chrome Safe Storage'],
-    label: 'Chrome Safe Storage',
+    account: "Chrome",
+    services: ["Chrome Safe Storage"],
+    label: "Chrome Safe Storage",
 };
 const CHROMIUM_BROWSER_TARGETS = [
     {
-        id: 'chrome',
-        root: 'Google/Chrome',
+        id: "chrome",
+        root: "Google/Chrome",
         keychain: DEFAULT_CHROMIUM_KEYCHAIN,
     },
     {
-        id: 'brave',
-        root: 'BraveSoftware/Brave-Browser',
+        id: "brave",
+        root: "BraveSoftware/Brave-Browser",
         keychain: {
-            account: 'Brave',
-            services: ['Brave Safe Storage'],
-            label: 'Brave Safe Storage',
+            account: "Brave",
+            services: ["Brave Safe Storage"],
+            label: "Brave Safe Storage",
         },
     },
     {
-        id: 'arc',
-        root: 'Arc/User Data',
+        id: "arc",
+        root: "Arc/User Data",
         keychain: {
-            account: 'Arc',
-            services: ['Arc Safe Storage'],
-            label: 'Arc Safe Storage',
+            account: "Arc",
+            services: ["Arc Safe Storage"],
+            label: "Arc Safe Storage",
         },
     },
     {
-        id: 'chromium',
-        root: 'Chromium',
+        id: "chromium",
+        root: "Chromium",
         keychain: {
-            account: 'Chromium',
-            services: ['Chromium Safe Storage'],
-            label: 'Chromium Safe Storage',
+            account: "Chromium",
+            services: ["Chromium Safe Storage"],
+            label: "Chromium Safe Storage",
         },
     },
 ];
 export async function getCookiesFromChromeSqliteMac(options, origins, allowlistNames) {
     const dbPath = resolveChromeCookiesDb(options.profile, options.chromiumBrowser);
     if (!dbPath) {
-        return { cookies: [], warnings: ['Chrome cookies database not found.'] };
+        return { cookies: [], warnings: ["Chrome cookies database not found."] };
     }
     const warnings = [];
     // On macOS, Chromium stores its "Safe Storage" secret in Keychain.
@@ -76,12 +76,15 @@ export async function getCookiesFromChromeSqliteMac(options, origins, allowlistN
     const dbOptions = {
         dbPath,
     };
-    if (options.profile)
+    if (options.profile) {
         dbOptions.profile = options.profile;
-    if (options.includeExpired !== undefined)
+    }
+    if (options.includeExpired !== undefined) {
         dbOptions.includeExpired = options.includeExpired;
-    if (options.debug !== undefined)
+    }
+    if (options.debug !== undefined) {
         dbOptions.debug = options.debug;
+    }
     const result = await getCookiesFromChromeSqliteDb(dbOptions, origins, allowlistNames, decrypt);
     result.warnings.unshift(...warnings);
     return result;
@@ -99,14 +102,15 @@ function resolveChromeCookiesDb(profile, chromiumBrowser) {
     const home = homedir();
     const selectedTargets = chromiumBrowser
         ? CHROMIUM_BROWSER_TARGETS.filter((target) => target.id === chromiumBrowser)
-        : CHROMIUM_BROWSER_TARGETS.filter((target) => target.id === 'chrome' || target.id === 'brave');
+        : CHROMIUM_BROWSER_TARGETS.filter((target) => target.id === "chrome" || target.id === "brave");
     /* c8 ignore next */
-    const roots = process.platform === 'darwin'
-        ? selectedTargets.map((target) => path.join(home, 'Library', 'Application Support', ...target.root.split('/')))
+    const roots = process.platform === "darwin"
+        ? selectedTargets.map((target) => path.join(home, "Library", "Application Support", ...target.root.split("/")))
         : [];
     const args = { roots };
-    if (profile !== undefined)
+    if (profile !== undefined) {
         args.profile = profile;
+    }
     return resolveCookiesDbFromProfileOrRoots(args);
 }
 //# sourceMappingURL=chromeSqliteMac.js.map

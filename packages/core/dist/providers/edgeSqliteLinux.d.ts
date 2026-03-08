@@ -1,4 +1,4 @@
-import type { GetCookiesResult } from '../types.js';
+import type { GetCookiesResult } from "../types.js";
 export declare function getCookiesFromEdgeSqliteLinux(options: {
     profile?: string;
     includeExpired?: boolean;

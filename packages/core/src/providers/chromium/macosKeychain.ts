@@ -1,4 +1,4 @@
-import { execCapture } from '../../util/exec.js';
+import { execCapture } from "../../util/exec.js";
 
 export async function readKeychainGenericPassword(options: {
 	account: string;
@@ -6,9 +6,9 @@ export async function readKeychainGenericPassword(options: {
 	timeoutMs: number;
 }): Promise<{ ok: true; password: string } | { ok: false; error: string }> {
 	const res = await execCapture(
-		'security',
-		['find-generic-password', '-w', '-a', options.account, '-s', options.service],
-		{ timeoutMs: options.timeoutMs }
+		"security",
+		["find-generic-password", "-w", "-a", options.account, "-s", options.service],
+		{ timeoutMs: options.timeoutMs },
 	);
 	if (res.code === 0) {
 		const password = res.stdout.trim();
@@ -16,7 +16,7 @@ export async function readKeychainGenericPassword(options: {
 	}
 	return {
 		ok: false,
-		error: `${res.stderr.trim() || `exit ${res.code}`}`,
+		error: res.stderr.trim() || `exit ${res.code}`,
 	};
 }
 
@@ -33,12 +33,14 @@ export async function readKeychainGenericPasswordFirst(options: {
 			service,
 			timeoutMs: options.timeoutMs,
 		});
-		if (r.ok) return r;
+		if (r.ok) {
+			return r;
+		}
 		lastError = r.error;
 	}
 
 	return {
 		ok: false,
-		error: `Failed to read macOS Keychain (${options.label}): ${lastError ?? 'permission denied / keychain locked / entry missing.'}`,
+		error: `Failed to read macOS Keychain (${options.label}): ${lastError ?? "permission denied / keychain locked / entry missing."}`,
 	};
 }

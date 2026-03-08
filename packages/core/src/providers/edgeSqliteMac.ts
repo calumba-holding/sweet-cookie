@@ -1,23 +1,23 @@
-import { homedir } from 'node:os';
-import path from 'node:path';
+import { homedir } from "node:os";
+import path from "node:path";
 
-import type { GetCookiesResult } from '../types.js';
+import type { GetCookiesResult } from "../types.js";
 import {
 	decryptChromiumAes128CbcCookieValue,
 	deriveAes128CbcKeyFromPassword,
-} from './chromeSqlite/crypto.js';
-import { getCookiesFromChromeSqliteDb } from './chromeSqlite/shared.js';
-import { readKeychainGenericPasswordFirst } from './chromium/macosKeychain.js';
-import { resolveCookiesDbFromProfileOrRoots } from './chromium/paths.js';
+} from "./chromeSqlite/crypto.js";
+import { getCookiesFromChromeSqliteDb } from "./chromeSqlite/shared.js";
+import { readKeychainGenericPasswordFirst } from "./chromium/macosKeychain.js";
+import { resolveCookiesDbFromProfileOrRoots } from "./chromium/paths.js";
 
 export async function getCookiesFromEdgeSqliteMac(
 	options: { profile?: string; includeExpired?: boolean; debug?: boolean; timeoutMs?: number },
 	origins: string[],
-	allowlistNames: Set<string> | null
+	allowlistNames: Set<string> | null,
 ): Promise<GetCookiesResult> {
 	const dbPath = resolveEdgeCookiesDb(options.profile);
 	if (!dbPath) {
-		return { cookies: [], warnings: ['Edge cookies database not found.'] };
+		return { cookies: [], warnings: ["Edge cookies database not found."] };
 	}
 
 	const warnings: string[] = [];
@@ -25,10 +25,10 @@ export async function getCookiesFromEdgeSqliteMac(
 	// On macOS, Edge stores its "Safe Storage" secret in Keychain (same scheme as Chrome).
 	// `security find-generic-password` is stable and avoids any native Node keychain modules.
 	const passwordResult = await readKeychainGenericPasswordFirst({
-		account: 'Microsoft Edge',
-		services: ['Microsoft Edge Safe Storage', 'Microsoft Edge'],
+		account: "Microsoft Edge",
+		services: ["Microsoft Edge Safe Storage", "Microsoft Edge"],
 		timeoutMs: options.timeoutMs ?? 3_000,
-		label: 'Microsoft Edge Safe Storage',
+		label: "Microsoft Edge Safe Storage",
 	});
 	if (!passwordResult.ok) {
 		warnings.push(passwordResult.error);
@@ -37,7 +37,7 @@ export async function getCookiesFromEdgeSqliteMac(
 
 	const edgePassword = passwordResult.password.trim();
 	if (!edgePassword) {
-		warnings.push('macOS Keychain returned an empty Microsoft Edge Safe Storage password.');
+		warnings.push("macOS Keychain returned an empty Microsoft Edge Safe Storage password.");
 		return { cookies: [], warnings };
 	}
 
@@ -53,9 +53,15 @@ export async function getCookiesFromEdgeSqliteMac(
 		{
 			dbPath,
 		};
-	if (options.profile) dbOptions.profile = options.profile;
-	if (options.includeExpired !== undefined) dbOptions.includeExpired = options.includeExpired;
-	if (options.debug !== undefined) dbOptions.debug = options.debug;
+	if (options.profile) {
+		dbOptions.profile = options.profile;
+	}
+	if (options.includeExpired !== undefined) {
+		dbOptions.includeExpired = options.includeExpired;
+	}
+	if (options.debug !== undefined) {
+		dbOptions.debug = options.debug;
+	}
 
 	const result = await getCookiesFromChromeSqliteDb(dbOptions, origins, allowlistNames, decrypt);
 	result.warnings.unshift(...warnings);
@@ -66,10 +72,12 @@ function resolveEdgeCookiesDb(profile?: string): string | null {
 	const home = homedir();
 	/* c8 ignore next */
 	const roots =
-		process.platform === 'darwin'
-			? [path.join(home, 'Library', 'Application Support', 'Microsoft Edge')]
+		process.platform === "darwin"
+			? [path.join(home, "Library", "Application Support", "Microsoft Edge")]
 			: [];
 	const args: Parameters<typeof resolveCookiesDbFromProfileOrRoots>[0] = { roots };
-	if (profile !== undefined) args.profile = profile;
+	if (profile !== undefined) {
+		args.profile = profile;
+	}
 	return resolveCookiesDbFromProfileOrRoots(args);
 }

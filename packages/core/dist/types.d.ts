@@ -9,8 +9,8 @@
  *   (or `edgeProfile` if you want to keep sources separate).
  * - Only modern Chromium cookie DB schemas are supported (roughly Chrome >= 100).
  */
-export type BrowserName = 'chrome' | 'edge' | 'firefox' | 'safari';
-export type CookieSameSite = 'Strict' | 'Lax' | 'None';
+export type BrowserName = "chrome" | "edge" | "firefox" | "safari";
+export type CookieSameSite = "Strict" | "Lax" | "None";
 export interface Cookie {
     /** Cookie name (required). */
     name: string;
@@ -40,7 +40,7 @@ export interface Cookie {
         storeId?: string;
     };
 }
-export type CookieMode = 'merge' | 'first';
+export type CookieMode = "merge" | "first";
 export interface GetCookiesOptions {
     /**
      * Primary URL used to derive default origin filtering.
@@ -92,7 +92,7 @@ export interface GetCookiesOptions {
      * When omitted, the macOS `chrome` backend checks Chrome and Brave roots by default.
      * Only used when `browsers` includes 'chrome'.
      */
-    chromiumBrowser?: 'chrome' | 'brave' | 'arc' | 'chromium';
+    chromiumBrowser?: "chrome" | "brave" | "arc" | "chromium";
     /** Include expired cookies (default: false). */
     includeExpired?: boolean;
     /** Timeout for OS helper calls (keychain/keyring/DPAPI). */
@@ -123,6 +123,6 @@ export interface CookieHeaderOptions {
     /** If true, keeps the first cookie value per name and drops duplicates. */
     dedupeByName?: boolean;
     /** Sorting strategy for the emitted header. */
-    sort?: 'name' | 'none';
+    sort?: "name" | "none";
 }
 //# sourceMappingURL=types.d.ts.map

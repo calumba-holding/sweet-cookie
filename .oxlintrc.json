@@ -1,11 +1,30 @@
 {
-	"$schema": "https://oxc.rs/schema/oxlintrc.json",
-	"plugins": ["typescript", "unicorn"],
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["unicorn", "typescript", "oxc"],
+	"categories": {
+		"correctness": "error",
+		"perf": "error",
+		"suspicious": "error"
+	},
 	"rules": {
+		"curly": "error",
 		"eslint/no-debugger": "error",
+		"eslint/no-await-in-loop": "off",
+		"eslint/no-new": "off",
+		"eslint/no-shadow": "off",
+		"eslint/no-unmodified-loop-condition": "off",
 		"eslint/no-unused-vars": "off",
+		"oxc/no-accumulating-spread": "off",
+		"oxc/no-async-endpoint-handlers": "off",
+		"oxc/no-map-spread": "off",
+		"typescript/no-explicit-any": "error",
+		"typescript/no-extraneous-class": "off",
+		"typescript/no-unsafe-type-assertion": "off",
 		"typescript/no-unused-vars": "error",
+		"unicorn/consistent-function-scoping": "off",
 		"unicorn/no-array-for-each": "off",
+		"unicorn/no-array-sort": "off",
 		"unicorn/no-null": "off"
-	}
+	},
+	"ignorePatterns": ["coverage/", "dist/", "node_modules/", "pnpm-lock.yaml"]
 }

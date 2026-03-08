@@ -1,4 +1,4 @@
-import type { GetCookiesResult } from '../types.js';
+import type { GetCookiesResult } from "../types.js";
 type InlineSource = {
     source: string;
     payload: string;

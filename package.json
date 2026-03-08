@@ -2,25 +2,28 @@
 	"name": "sweet-cookie",
 	"private": true,
 	"type": "module",
-	"packageManager": "pnpm@10.25.0",
 	"scripts": {
 		"build": "pnpm -r build",
-		"lint": "biome check . && oxlint --type-aware --tsconfig tsconfig.lint.json --config .oxlintrc.json --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\" --ignore-pattern \"**/coverage/**\" .",
-		"format": "biome format --write .",
+		"check": "pnpm format:check && pnpm typecheck && pnpm lint",
+		"format": "oxfmt --write .",
+		"format:check": "oxfmt --check .",
+		"format:diff": "oxfmt --write . && git --no-pager diff",
+		"lint": "oxlint --type-aware --tsconfig tsconfig.lint.json --config .oxlintrc.json .",
+		"lint:fix": "oxlint --type-aware --tsconfig tsconfig.lint.json --config .oxlintrc.json --fix . && pnpm format",
 		"test": "vitest run --coverage",
 		"test:bun": "bun test packages/core/tests-bun",
 		"test:watch": "vitest",
 		"typecheck": "pnpm -r typecheck"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.6",
 		"@types/node": "^25.3.5",
 		"@vitest/coverage-v8": "^4.0.18",
+		"oxfmt": "^0.36.0",
 		"oxlint": "^1.51.0",
-		"oxlint-tsgolint": "^0.16.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"
 	},
+	"packageManager": "pnpm@10.25.0",
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"esbuild"

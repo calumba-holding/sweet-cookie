@@ -1,9 +1,11 @@
 export function normalizeExpiration(expires) {
-    if (expires === undefined || expires === null)
+    if (expires === undefined || expires === null) {
         return undefined;
-    if (typeof expires === 'bigint') {
-        if (expires <= 0n)
+    }
+    if (typeof expires === "bigint") {
+        if (expires <= 0n) {
             return undefined;
+        }
         if (expires > 10000000000000n) {
             return Number(expires / 1000000n - 11644473600n);
         }
@@ -12,11 +14,13 @@ export function normalizeExpiration(expires) {
         }
         return Number(expires);
     }
-    if (!expires || Number.isNaN(expires))
+    if (!expires || Number.isNaN(expires)) {
         return undefined;
+    }
     const value = Number(expires);
-    if (value <= 0)
+    if (value <= 0) {
         return undefined;
+    }
     // Chromium can use microseconds since 1601 (Windows epoch) in sqlite stores.
     if (value > 10_000_000_000_000) {
         return Math.round(value / 1_000_000 - 11_644_473_600);

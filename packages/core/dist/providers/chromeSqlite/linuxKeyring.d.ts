@@ -1,4 +1,4 @@
-export type LinuxKeyringBackend = 'gnome' | 'kwallet' | 'basic';
+export type LinuxKeyringBackend = "gnome" | "kwallet" | "basic";
 /**
  * Read the "Safe Storage" password from a Linux keyring.
  *
@@ -11,7 +11,7 @@ export type LinuxKeyringBackend = 'gnome' | 'kwallet' | 'basic';
  */
 export declare function getLinuxChromiumSafeStoragePassword(options: {
     backend?: LinuxKeyringBackend;
-    app: 'chrome' | 'edge' | 'brave';
+    app: "chrome" | "edge" | "brave";
 }): Promise<{
     password: string;
     warnings: string[];

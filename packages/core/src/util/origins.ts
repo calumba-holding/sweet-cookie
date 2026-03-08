@@ -9,7 +9,9 @@ export function normalizeOrigins(url: string, extraOrigins?: string[]): string[]
 
 	for (const raw of extraOrigins ?? []) {
 		const trimmed = raw.trim();
-		if (!trimmed) continue;
+		if (!trimmed) {
+			continue;
+		}
 		try {
 			const parsed = new URL(trimmed);
 			origins.push(ensureTrailingSlash(parsed.origin));
@@ -22,5 +24,5 @@ export function normalizeOrigins(url: string, extraOrigins?: string[]): string[]
 }
 
 function ensureTrailingSlash(origin: string): string {
-	return origin.endsWith('/') ? origin : `${origin}/`;
+	return origin.endsWith("/") ? origin : `${origin}/`;
 }

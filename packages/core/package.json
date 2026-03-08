@@ -2,25 +2,25 @@
 	"name": "@steipete/sweet-cookie",
 	"version": "0.2.0",
 	"description": "Inline-first browser cookie extraction for local tooling (no native addons).",
+	"homepage": "https://github.com/steipete/sweet-cookie#readme",
+	"bugs": {
+		"url": "https://github.com/steipete/sweet-cookie/issues"
+	},
 	"license": "MIT",
 	"author": "Peter Steinberger",
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/steipete/sweet-cookie.git",
 		"directory": "packages/core"
 	},
-	"bugs": {
-		"url": "https://github.com/steipete/sweet-cookie/issues"
-	},
-	"homepage": "https://github.com/steipete/sweet-cookie#readme",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",

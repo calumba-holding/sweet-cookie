@@ -1,4 +1,4 @@
-import type { Cookie, CookieHeaderOptions, GetCookiesOptions, GetCookiesResult } from './types.js';
+import type { Cookie, CookieHeaderOptions, GetCookiesOptions, GetCookiesResult } from "./types.js";
 /**
  * Read cookies for a URL from one or more browser backends (and/or inline payloads).
  *

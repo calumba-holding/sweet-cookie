@@ -1,6 +1,6 @@
-import { execCapture } from '../../util/exec.js';
+import { execCapture } from "../../util/exec.js";
 
-export type LinuxKeyringBackend = 'gnome' | 'kwallet' | 'basic';
+export type LinuxKeyringBackend = "gnome" | "kwallet" | "basic";
 
 /**
  * Read the "Safe Storage" password from a Linux keyring.
@@ -14,38 +14,42 @@ export type LinuxKeyringBackend = 'gnome' | 'kwallet' | 'basic';
  */
 export async function getLinuxChromiumSafeStoragePassword(options: {
 	backend?: LinuxKeyringBackend;
-	app: 'chrome' | 'edge' | 'brave';
+	app: "chrome" | "edge" | "brave";
 }): Promise<{ password: string; warnings: string[] }> {
 	const warnings: string[] = [];
 
 	// Escape hatch: if callers already know the password (or want deterministic CI behavior),
 	// they can bypass keyring probing entirely.
 	const overrideKey =
-		options.app === 'edge'
-			? 'SWEET_COOKIE_EDGE_SAFE_STORAGE_PASSWORD'
-			: options.app === 'brave'
-				? 'SWEET_COOKIE_BRAVE_SAFE_STORAGE_PASSWORD'
-				: 'SWEET_COOKIE_CHROME_SAFE_STORAGE_PASSWORD';
+		options.app === "edge"
+			? "SWEET_COOKIE_EDGE_SAFE_STORAGE_PASSWORD"
+			: options.app === "brave"
+				? "SWEET_COOKIE_BRAVE_SAFE_STORAGE_PASSWORD"
+				: "SWEET_COOKIE_CHROME_SAFE_STORAGE_PASSWORD";
 	const override = readEnv(overrideKey);
-	if (override !== undefined) return { password: override, warnings };
+	if (override !== undefined) {
+		return { password: override, warnings };
+	}
 
 	const backend = options.backend ?? parseLinuxKeyringBackend() ?? chooseLinuxKeyringBackend();
 	// `basic` means "don't try keyrings" (Chrome will fall back to older/less-secure schemes on some setups).
-	if (backend === 'basic') return { password: '', warnings };
+	if (backend === "basic") {
+		return { password: "", warnings };
+	}
 
 	const service =
-		options.app === 'edge'
-			? 'Microsoft Edge Safe Storage'
-			: options.app === 'brave'
-				? 'Brave Safe Storage'
-				: 'Chrome Safe Storage';
+		options.app === "edge"
+			? "Microsoft Edge Safe Storage"
+			: options.app === "brave"
+				? "Brave Safe Storage"
+				: "Chrome Safe Storage";
 	const account =
-		options.app === 'edge' ? 'Microsoft Edge' : options.app === 'brave' ? 'Brave' : 'Chrome';
+		options.app === "edge" ? "Microsoft Edge" : options.app === "brave" ? "Brave" : "Chrome";
 	const folder = `${account} Keys`;
 	const application =
-		options.app === 'edge' ? 'msedge' : options.app === 'brave' ? 'brave' : 'chrome';
+		options.app === "edge" ? "msedge" : options.app === "brave" ? "brave" : "chrome";
 
-	if (backend === 'gnome') {
+	if (backend === "gnome") {
 		// GNOME keyring: `secret-tool` is the simplest way to read libsecret entries.
 		//
 		// Chromium-based browsers (e.g. Chrome, Edge, Brave) have used multiple libsecret
@@ -56,106 +60,127 @@ export async function getLinuxChromiumSafeStoragePassword(options: {
 		//
 		// Try the classic service/account lookup first, then fall back to application
 		// (which varies by options.app).
-		let res = await execCapture('secret-tool', ['lookup', 'service', service, 'account', account], {
+		let res = await execCapture("secret-tool", ["lookup", "service", service, "account", account], {
 			timeoutMs: 3_000,
 		});
-		if (res.code === 0 && res.stdout.trim()) return { password: res.stdout.trim(), warnings };
+		if (res.code === 0 && res.stdout.trim()) {
+			return { password: res.stdout.trim(), warnings };
+		}
 
 		// Fallback: try application-based lookup (chrome_libsecret_os_crypt_password_v2 schema)
-		res = await execCapture('secret-tool', ['lookup', 'application', application], {
+		res = await execCapture("secret-tool", ["lookup", "application", application], {
 			timeoutMs: 3_000,
 		});
-		if (res.code === 0 && res.stdout.trim()) return { password: res.stdout.trim(), warnings };
-		warnings.push('Failed to read Linux keyring via secret-tool; v11 cookies may be unavailable.');
-		return { password: '', warnings };
+		if (res.code === 0 && res.stdout.trim()) {
+			return { password: res.stdout.trim(), warnings };
+		}
+		warnings.push("Failed to read Linux keyring via secret-tool; v11 cookies may be unavailable.");
+		return { password: "", warnings };
 	}
 
 	// KDE keyring: query KWallet via `kwallet-query`, but the wallet name differs across KDE versions.
-	const kdeVersion = (readEnv('KDE_SESSION_VERSION') ?? '').trim();
+	const kdeVersion = (readEnv("KDE_SESSION_VERSION") ?? "").trim();
 	const serviceName =
-		kdeVersion === '6'
-			? 'org.kde.kwalletd6'
-			: kdeVersion === '5'
-				? 'org.kde.kwalletd5'
-				: 'org.kde.kwalletd';
+		kdeVersion === "6"
+			? "org.kde.kwalletd6"
+			: kdeVersion === "5"
+				? "org.kde.kwalletd5"
+				: "org.kde.kwalletd";
 	const walletPath =
-		kdeVersion === '6'
-			? '/modules/kwalletd6'
-			: kdeVersion === '5'
-				? '/modules/kwalletd5'
-				: '/modules/kwalletd';
+		kdeVersion === "6"
+			? "/modules/kwalletd6"
+			: kdeVersion === "5"
+				? "/modules/kwalletd5"
+				: "/modules/kwalletd";
 
 	const wallet = await getKWalletNetworkWallet(serviceName, walletPath);
 	const passwordRes = await execCapture(
-		'kwallet-query',
-		['--read-password', service, '--folder', folder, wallet],
-		{ timeoutMs: 3_000 }
+		"kwallet-query",
+		["--read-password", service, "--folder", folder, wallet],
+		{ timeoutMs: 3_000 },
 	);
 	if (passwordRes.code !== 0) {
 		warnings.push(
-			'Failed to read Linux keyring via kwallet-query; v11 cookies may be unavailable.'
+			"Failed to read Linux keyring via kwallet-query; v11 cookies may be unavailable.",
 		);
-		return { password: '', warnings };
+		return { password: "", warnings };
 	}
-	if (passwordRes.stdout.toLowerCase().startsWith('failed to read'))
-		return { password: '', warnings };
+	if (passwordRes.stdout.toLowerCase().startsWith("failed to read")) {
+		return { password: "", warnings };
+	}
 	return { password: passwordRes.stdout.trim(), warnings };
 }
 
 export async function getLinuxChromeSafeStoragePassword(
-	options: { backend?: LinuxKeyringBackend } = {}
+	options: { backend?: LinuxKeyringBackend } = {},
 ): Promise<{ password: string; warnings: string[] }> {
-	const args: { app: 'chrome'; backend?: LinuxKeyringBackend } = { app: 'chrome' };
-	if (options.backend !== undefined) args.backend = options.backend;
+	const args: { app: "chrome"; backend?: LinuxKeyringBackend } = { app: "chrome" };
+	if (options.backend !== undefined) {
+		args.backend = options.backend;
+	}
 	return await getLinuxChromiumSafeStoragePassword(args);
 }
 
 export async function getLinuxBraveSafeStoragePassword(
-	options: { backend?: LinuxKeyringBackend } = {}
+	options: { backend?: LinuxKeyringBackend } = {},
 ): Promise<{ password: string; warnings: string[] }> {
-	const args: { app: 'brave'; backend?: LinuxKeyringBackend } = { app: 'brave' };
-	if (options.backend !== undefined) args.backend = options.backend;
+	const args: { app: "brave"; backend?: LinuxKeyringBackend } = { app: "brave" };
+	if (options.backend !== undefined) {
+		args.backend = options.backend;
+	}
 	return await getLinuxChromiumSafeStoragePassword(args);
 }
 
 function parseLinuxKeyringBackend(): LinuxKeyringBackend | undefined {
-	const raw = readEnv('SWEET_COOKIE_LINUX_KEYRING');
-	if (!raw) return undefined;
+	const raw = readEnv("SWEET_COOKIE_LINUX_KEYRING");
+	if (!raw) {
+		return undefined;
+	}
 	const normalized = raw.toLowerCase();
-	if (normalized === 'gnome') return 'gnome';
-	if (normalized === 'kwallet') return 'kwallet';
-	if (normalized === 'basic') return 'basic';
+	if (normalized === "gnome") {
+		return "gnome";
+	}
+	if (normalized === "kwallet") {
+		return "kwallet";
+	}
+	if (normalized === "basic") {
+		return "basic";
+	}
 	return undefined;
 }
 
 function chooseLinuxKeyringBackend(): LinuxKeyringBackend {
-	const xdg = readEnv('XDG_CURRENT_DESKTOP') ?? '';
+	const xdg = readEnv("XDG_CURRENT_DESKTOP") ?? "";
 	const isKde =
-		xdg.split(':').some((p) => p.trim().toLowerCase() === 'kde') || !!readEnv('KDE_FULL_SESSION');
-	return isKde ? 'kwallet' : 'gnome';
+		xdg.split(":").some((p) => p.trim().toLowerCase() === "kde") || !!readEnv("KDE_FULL_SESSION");
+	return isKde ? "kwallet" : "gnome";
 }
 
 async function getKWalletNetworkWallet(serviceName: string, walletPath: string): Promise<string> {
 	const res = await execCapture(
-		'dbus-send',
+		"dbus-send",
 		[
-			'--session',
-			'--print-reply=literal',
+			"--session",
+			"--print-reply=literal",
 			`--dest=${serviceName}`,
 			walletPath,
-			'org.kde.KWallet.networkWallet',
+			"org.kde.KWallet.networkWallet",
 		],
-		{ timeoutMs: 3_000 }
+		{ timeoutMs: 3_000 },
 	);
-	const fallback = 'kdewallet';
-	if (res.code !== 0) return fallback;
+	const fallback = "kdewallet";
+	if (res.code !== 0) {
+		return fallback;
+	}
 	const raw = res.stdout.trim();
-	if (!raw) return fallback;
-	return raw.replaceAll('"', '').trim() || fallback;
+	if (!raw) {
+		return fallback;
+	}
+	return raw.replaceAll('"', "").trim() || fallback;
 }
 
 function readEnv(key: string): string | undefined {
 	const value = process.env[key];
-	const trimmed = typeof value === 'string' ? value.trim() : '';
+	const trimmed = typeof value === "string" ? value.trim() : "";
 	return trimmed.length ? trimmed : undefined;
 }

@@ -1,14 +1,14 @@
-import type { Cookie, GetCookiesResult } from '../types.js';
-import { tryDecodeBase64Json } from '../util/base64.js';
-import { readTextFileIfExists } from '../util/fs.js';
-import { hostMatchesCookieDomain } from '../util/hostMatch.js';
+import type { Cookie, GetCookiesResult } from "../types.js";
+import { tryDecodeBase64Json } from "../util/base64.js";
+import { readTextFileIfExists } from "../util/fs.js";
+import { hostMatchesCookieDomain } from "../util/hostMatch.js";
 
 type InlineSource = { source: string; payload: string };
 
 export async function getCookiesFromInline(
 	inline: InlineSource,
 	origins: string[],
-	allowlistNames: Set<string> | null
+	allowlistNames: Set<string> | null,
 ): Promise<GetCookiesResult> {
 	const warnings: string[] = [];
 
@@ -18,9 +18,9 @@ export async function getCookiesFromInline(
 	//
 	// We do a small heuristic: treat `*.json`/`*.base64` and explicit "file" sources as file paths first.
 	const rawPayload =
-		inline.source.endsWith('file') ||
-		inline.payload.endsWith('.json') ||
-		inline.payload.endsWith('.base64')
+		inline.source.endsWith("file") ||
+		inline.payload.endsWith(".json") ||
+		inline.payload.endsWith(".base64")
 			? ((await readTextFileIfExists(inline.payload)) ?? inline.payload)
 			: inline.payload;
 
@@ -35,10 +35,16 @@ export async function getCookiesFromInline(
 
 	const cookies: Cookie[] = [];
 	for (const cookie of parsed.cookies) {
-		if (!cookie?.name) continue;
-		if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(cookie.name)) continue;
+		if (!cookie?.name) {
+			continue;
+		}
+		if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(cookie.name)) {
+			continue;
+		}
 		const domain = cookie.domain ?? (cookie.url ? safeHostnameFromUrl(cookie.url) : undefined);
-		if (domain && hostAllow.size > 0 && !matchesAnyHost(hostAllow, domain)) continue;
+		if (domain && hostAllow.size > 0 && !matchesAnyHost(hostAllow, domain)) {
+			continue;
+		}
 		cookies.push(cookie);
 	}
 
@@ -47,7 +53,9 @@ export async function getCookiesFromInline(
 
 function tryParseCookiePayload(input: string): { cookies: Cookie[] } | null {
 	const trimmed = input.trim();
-	if (!trimmed) return null;
+	if (!trimmed) {
+		return null;
+	}
 	try {
 		const parsed = JSON.parse(trimmed) as unknown;
 		if (Array.isArray(parsed)) {
@@ -55,7 +63,7 @@ function tryParseCookiePayload(input: string): { cookies: Cookie[] } | null {
 		}
 		if (
 			parsed &&
-			typeof parsed === 'object' &&
+			typeof parsed === "object" &&
 			Array.isArray((parsed as { cookies?: unknown }).cookies)
 		) {
 			return { cookies: (parsed as { cookies: Cookie[] }).cookies };
@@ -68,7 +76,9 @@ function tryParseCookiePayload(input: string): { cookies: Cookie[] } | null {
 
 function matchesAnyHost(hosts: Set<string>, cookieDomain: string): boolean {
 	for (const host of hosts) {
-		if (hostMatchesCookieDomain(host, cookieDomain)) return true;
+		if (hostMatchesCookieDomain(host, cookieDomain)) {
+			return true;
+		}
 	}
 	return false;
 }

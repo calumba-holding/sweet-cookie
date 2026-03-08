@@ -1,5 +1,5 @@
-import type { GetCookiesResult } from '../types.js';
-export type ChromiumBrowserId = 'chrome' | 'brave' | 'arc' | 'chromium';
+import type { GetCookiesResult } from "../types.js";
+export type ChromiumBrowserId = "chrome" | "brave" | "arc" | "chromium";
 export declare function getCookiesFromChromeSqliteMac(options: {
     profile?: string;
     includeExpired?: boolean;

@@ -1,16 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import path from 'node:path';
-import { hostMatchesCookieDomain } from '../util/hostMatch.js';
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
+import { hostMatchesCookieDomain } from "../util/hostMatch.js";
 const MAC_EPOCH_DELTA_SECONDS = 978_307_200;
 export async function getCookiesFromSafari(options, origins, allowlistNames) {
     const warnings = [];
-    if (process.platform !== 'darwin') {
+    if (process.platform !== "darwin") {
         return { cookies: [], warnings };
     }
     const cookieFile = options.file ?? resolveSafariBinaryCookiesPath();
     if (!cookieFile) {
-        warnings.push('Safari Cookies.binarycookies not found.');
+        warnings.push("Safari Cookies.binarycookies not found.");
         return { cookies: [], warnings };
     }
     const hosts = origins.map((o) => new URL(o).hostname);
@@ -22,17 +22,22 @@ export async function getCookiesFromSafari(options, origins, allowlistNames) {
         const parsed = decodeBinaryCookies(data);
         const cookies = [];
         for (const cookie of parsed) {
-            if (!cookie.name)
+            if (!cookie.name) {
                 continue;
-            if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(cookie.name))
+            }
+            if (allowlistNames && allowlistNames.size > 0 && !allowlistNames.has(cookie.name)) {
                 continue;
+            }
             const domain = cookie.domain;
-            if (!domain)
+            if (!domain) {
                 continue;
-            if (!hosts.some((h) => hostMatchesCookieDomain(h, domain)))
+            }
+            if (!hosts.some((h) => hostMatchesCookieDomain(h, domain))) {
                 continue;
-            if (!options.includeExpired && cookie.expires && cookie.expires < now)
+            }
+            if (!options.includeExpired && cookie.expires && cookie.expires < now) {
                 continue;
+            }
             cookies.push(cookie);
         }
         return { cookies: dedupeCookies(cookies), warnings };
@@ -45,20 +50,23 @@ export async function getCookiesFromSafari(options, origins, allowlistNames) {
 function resolveSafariBinaryCookiesPath() {
     const home = homedir();
     const candidates = [
-        path.join(home, 'Library', 'Cookies', 'Cookies.binarycookies'),
-        path.join(home, 'Library', 'Containers', 'com.apple.Safari', 'Data', 'Library', 'Cookies', 'Cookies.binarycookies'),
+        path.join(home, "Library", "Cookies", "Cookies.binarycookies"),
+        path.join(home, "Library", "Containers", "com.apple.Safari", "Data", "Library", "Cookies", "Cookies.binarycookies"),
     ];
     for (const candidate of candidates) {
-        if (existsSync(candidate))
+        if (existsSync(candidate)) {
             return candidate;
+        }
     }
     return null;
 }
 function decodeBinaryCookies(buffer) {
-    if (buffer.length < 8)
+    if (buffer.length < 8) {
         return [];
-    if (buffer.subarray(0, 4).toString('utf8') !== 'cook')
+    }
+    if (buffer.subarray(0, 4).toString("utf8") !== "cook") {
         return [];
+    }
     const pageCount = buffer.readUInt32BE(4);
     let cursor = 8;
     const pageSizes = [];
@@ -75,11 +83,13 @@ function decodeBinaryCookies(buffer) {
     return cookies;
 }
 function decodePage(page) {
-    if (page.length < 16)
+    if (page.length < 16) {
         return [];
+    }
     const header = page.readUInt32BE(0);
-    if (header !== 0x00000100)
+    if (header !== 0x00000100) {
         return [];
+    }
     const cookieCount = page.readUInt32LE(4);
     const offsets = [];
     let cursor = 8;
@@ -90,17 +100,20 @@ function decodePage(page) {
     const cookies = [];
     for (const offset of offsets) {
         const cookie = decodeCookie(page.subarray(offset));
-        if (cookie)
+        if (cookie) {
             cookies.push(cookie);
+        }
     }
     return cookies;
 }
 function decodeCookie(cookieBuffer) {
-    if (cookieBuffer.length < 48)
+    if (cookieBuffer.length < 48) {
         return null;
+    }
     const size = cookieBuffer.readUInt32LE(0);
-    if (size < 48 || size > cookieBuffer.length)
+    if (size < 48 || size > cookieBuffer.length) {
         return null;
+    }
     const flagsValue = cookieBuffer.readUInt32LE(8);
     const isSecure = (flagsValue & 1) !== 0;
     const isHttpOnly = (flagsValue & 4) !== 0;
@@ -112,10 +125,11 @@ function decodeCookie(cookieBuffer) {
     const expiration = readDoubleLE(cookieBuffer, 40);
     const rawUrl = readCString(cookieBuffer, urlOffset, size);
     const name = readCString(cookieBuffer, nameOffset, size);
-    const cookiePath = readCString(cookieBuffer, pathOffset, size) ?? '/';
-    const value = readCString(cookieBuffer, valueOffset, size) ?? '';
-    if (!name)
+    const cookiePath = readCString(cookieBuffer, pathOffset, size) ?? "/";
+    const value = readCString(cookieBuffer, valueOffset, size) ?? "";
+    if (!name) {
         return null;
+    }
     const domain = rawUrl ? safeHostnameFromUrl(rawUrl) : undefined;
     const expires = expiration && expiration > 0 ? Math.round(expiration + MAC_EPOCH_DELTA_SECONDS) : undefined;
     const decoded = {
@@ -124,49 +138,57 @@ function decodeCookie(cookieBuffer) {
         path: cookiePath,
         secure: isSecure,
         httpOnly: isHttpOnly,
-        source: { browser: 'safari' },
+        source: { browser: "safari" },
     };
-    if (domain)
+    if (domain) {
         decoded.domain = domain;
-    if (expires !== undefined)
+    }
+    if (expires !== undefined) {
         decoded.expires = expires;
+    }
     return decoded;
 }
 function readDoubleLE(buffer, offset) {
-    if (offset + 8 > buffer.length)
+    if (offset + 8 > buffer.length) {
         return 0;
+    }
     const slice = buffer.subarray(offset, offset + 8);
     return slice.readDoubleLE(0);
 }
 function readCString(buffer, offset, end) {
-    if (offset <= 0 || offset >= end)
+    if (offset <= 0 || offset >= end) {
         return null;
+    }
     let cursor = offset;
-    while (cursor < end && buffer[cursor] !== 0)
+    while (cursor < end && buffer[cursor] !== 0) {
         cursor += 1;
-    if (cursor >= end)
+    }
+    if (cursor >= end) {
         return null;
-    return buffer.toString('utf8', offset, cursor);
+    }
+    return buffer.toString("utf8", offset, cursor);
 }
 function safeHostnameFromUrl(raw) {
     try {
-        const url = raw.includes('://') ? raw : `https://${raw}`;
+        const url = raw.includes("://") ? raw : `https://${raw}`;
         const parsed = new URL(url);
-        return parsed.hostname.startsWith('.') ? parsed.hostname.slice(1) : parsed.hostname;
+        return parsed.hostname.startsWith(".") ? parsed.hostname.slice(1) : parsed.hostname;
     }
     catch {
         const cleaned = raw.trim();
-        if (!cleaned)
+        if (!cleaned) {
             return undefined;
-        return cleaned.startsWith('.') ? cleaned.slice(1) : cleaned;
+        }
+        return cleaned.startsWith(".") ? cleaned.slice(1) : cleaned;
     }
 }
 function dedupeCookies(cookies) {
     const merged = new Map();
     for (const cookie of cookies) {
-        const key = `${cookie.name}|${cookie.domain ?? ''}|${cookie.path ?? ''}`;
-        if (!merged.has(key))
+        const key = `${cookie.name}|${cookie.domain ?? ""}|${cookie.path ?? ""}`;
+        if (!merged.has(key)) {
             merged.set(key, cookie);
+        }
     }
     return Array.from(merged.values());
 }

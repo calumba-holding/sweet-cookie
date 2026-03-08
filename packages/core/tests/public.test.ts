@@ -1,31 +1,31 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const itIfDarwin = process.platform === 'darwin' ? it : it.skip;
+const itIfDarwin = process.platform === "darwin" ? it : it.skip;
+
+type SqliteRow = Record<string, unknown>;
+type CaptureState = { lastOptions: unknown };
+type NodeSqliteState = { rows: SqliteRow[]; shouldThrow: boolean };
 
 function buildInlinePayload(): string {
 	return JSON.stringify({
-		cookies: [{ name: 'inline', value: '1', domain: 'chatgpt.com', path: '/' }],
+		cookies: [{ name: "inline", value: "1", domain: "chatgpt.com", path: "/" }],
 	});
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: test-only capture
-const edgeCapture = vi.hoisted(() => ({ lastOptions: null as any }));
-// biome-ignore lint/suspicious/noExplicitAny: test-only capture
-const chromeCapture = vi.hoisted(() => ({ lastOptions: null as any }));
+const edgeCapture = vi.hoisted<CaptureState>(() => ({ lastOptions: null }));
+const chromeCapture = vi.hoisted<CaptureState>(() => ({ lastOptions: null }));
+const safariCapture = vi.hoisted<CaptureState>(() => ({ lastOptions: null }));
+const nodeSqlite = vi.hoisted<NodeSqliteState>(() => ({ rows: [], shouldThrow: false }));
 
-// biome-ignore lint/suspicious/noExplicitAny: test-only control surface
-const nodeSqlite = vi.hoisted(() => ({ rows: [] as any[], shouldThrow: false }));
-
-vi.mock('node:sqlite', () => {
+vi.mock("node:sqlite", () => {
 	class DatabaseSync {
-		// biome-ignore lint/suspicious/noExplicitAny: test shim
-		constructor(_path: string, _options?: any) {
+		constructor(_path: string, _options?: unknown) {
 			if (nodeSqlite.shouldThrow) {
-				throw new Error('boom');
+				throw new Error("boom");
 			}
 		}
 
@@ -39,39 +39,58 @@ vi.mock('node:sqlite', () => {
 	return { DatabaseSync };
 });
 
-describe('public API', () => {
+describe("public API", () => {
 	beforeEach(() => {
+		vi.unstubAllEnvs();
 		nodeSqlite.rows = [];
 		nodeSqlite.shouldThrow = false;
 		edgeCapture.lastOptions = null;
 		chromeCapture.lastOptions = null;
+		safariCapture.lastOptions = null;
 	});
 
-	it('returns inline cookies first (and filters by name)', async () => {
-		const { getCookies } = await import('../src/index.js');
+	it("returns inline cookies first (and filters by name)", async () => {
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
-			names: ['inline'],
+			url: "https://chatgpt.com/",
+			names: ["inline"],
 			inlineCookiesJson: buildInlinePayload(),
-			browsers: ['chrome', 'firefox', 'safari'],
+			browsers: ["chrome", "firefox", "safari"],
 		});
-		expect(res.cookies.map((c) => c.name)).toEqual(['inline']);
+		expect(res.cookies.map((c) => c.name)).toEqual(["inline"]);
 	});
 
-	it('respects SWEET_COOKIE_BROWSERS env when browsers are not provided', async () => {
+	it("tries inline sources in order until one yields cookies", async () => {
+		const dir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-public-inline-"));
+		const inlineFile = path.join(dir, "cookies.json");
+		writeFileSync(inlineFile, buildInlinePayload(), "utf8");
+
+		const { getCookies } = await import("../src/index.js");
+		const res = await getCookies({
+			url: "https://chatgpt.com/",
+			inlineCookiesJson: JSON.stringify({ cookies: [] }),
+			inlineCookiesBase64: Buffer.from(buildInlinePayload(), "utf8").toString("base64"),
+			inlineCookiesFile: inlineFile,
+			browsers: ["chrome"],
+		});
+
+		expect(res.cookies.map((c) => c.name)).toEqual(["inline"]);
+	});
+
+	it("respects SWEET_COOKIE_BROWSERS env when browsers are not provided", async () => {
 		vi.resetModules();
 
-		const dir = mkdtempSync(path.join(tmpdir(), 'sweet-cookie-public-env-'));
-		const firefoxDir = path.join(dir, 'ff');
+		const dir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-public-env-"));
+		const firefoxDir = path.join(dir, "ff");
 		mkdirSync(firefoxDir, { recursive: true });
-		writeFileSync(path.join(firefoxDir, 'cookies.sqlite'), '', 'utf8');
+		writeFileSync(path.join(firefoxDir, "cookies.sqlite"), "", "utf8");
 
 		nodeSqlite.rows = [
 			{
-				name: 'firefox',
-				value: 'f',
-				host: '.chatgpt.com',
-				path: '/',
+				name: "firefox",
+				value: "f",
+				host: ".chatgpt.com",
+				path: "/",
 				expiry: 9999999999,
 				isSecure: 0,
 				isHttpOnly: 0,
@@ -79,40 +98,40 @@ describe('public API', () => {
 			},
 		];
 
-		vi.doMock('../src/providers/chrome.js', () => ({
+		vi.doMock("../src/providers/chrome.js", () => ({
 			getCookiesFromChrome: async () => ({
-				cookies: [{ name: 'chrome', value: 'c', domain: 'chatgpt.com', path: '/', secure: true }],
+				cookies: [{ name: "chrome", value: "c", domain: "chatgpt.com", path: "/", secure: true }],
 				warnings: [],
 			}),
 		}));
 
-		vi.stubEnv('SWEET_COOKIE_BROWSERS', 'firefox, chrome');
-		vi.stubEnv('SWEET_COOKIE_MODE', 'merge');
+		vi.stubEnv("SWEET_COOKIE_BROWSERS", "firefox, chrome");
+		vi.stubEnv("SWEET_COOKIE_MODE", "merge");
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
+			url: "https://chatgpt.com/",
 			firefoxProfile: firefoxDir,
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name).sort()).toEqual(['chrome', 'firefox']);
+		expect(res.cookies.map((c) => c.name).sort()).toEqual(["chrome", "firefox"]);
 	});
 
-	it('ignores unknown tokens in SWEET_COOKIE_BROWSERS and invalid SWEET_COOKIE_MODE', async () => {
+	it("ignores unknown tokens in SWEET_COOKIE_BROWSERS and invalid SWEET_COOKIE_MODE", async () => {
 		vi.resetModules();
 
-		const dir = mkdtempSync(path.join(tmpdir(), 'sweet-cookie-public-env-'));
-		const firefoxDir = path.join(dir, 'ff');
+		const dir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-public-env-"));
+		const firefoxDir = path.join(dir, "ff");
 		mkdirSync(firefoxDir, { recursive: true });
-		writeFileSync(path.join(firefoxDir, 'cookies.sqlite'), '', 'utf8');
+		writeFileSync(path.join(firefoxDir, "cookies.sqlite"), "", "utf8");
 
 		nodeSqlite.rows = [
 			{
-				name: 'firefox',
-				value: 'f',
-				host: '.chatgpt.com',
-				path: '/',
+				name: "firefox",
+				value: "f",
+				host: ".chatgpt.com",
+				path: "/",
 				expiry: 9999999999,
 				isSecure: 0,
 				isHttpOnly: 0,
@@ -120,95 +139,149 @@ describe('public API', () => {
 			},
 		];
 
-		vi.stubEnv('SWEET_COOKIE_BROWSERS', 'firefox, nope');
-		vi.stubEnv('SWEET_COOKIE_MODE', 'nope');
+		vi.stubEnv("SWEET_COOKIE_BROWSERS", "firefox, nope");
+		vi.stubEnv("SWEET_COOKIE_MODE", "nope");
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
+			url: "https://chatgpt.com/",
 			firefoxProfile: firefoxDir,
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name)).toEqual(['firefox']);
+		expect(res.cookies.map((c) => c.name)).toEqual(["firefox"]);
 	});
 
-	it('supports edge backend and uses SWEET_COOKIE_EDGE_PROFILE', async () => {
+	it("supports edge backend and uses SWEET_COOKIE_EDGE_PROFILE", async () => {
 		vi.resetModules();
 
-		vi.doMock('../src/providers/edge.js', () => ({
+		vi.doMock("../src/providers/edge.js", () => ({
 			getCookiesFromEdge: async (options: unknown) => {
 				edgeCapture.lastOptions = options;
 				return {
-					cookies: [{ name: 'edge', value: 'e', domain: 'chatgpt.com', path: '/', secure: true }],
+					cookies: [{ name: "edge", value: "e", domain: "chatgpt.com", path: "/", secure: true }],
 					warnings: [],
 				};
 			},
 		}));
 
-		vi.stubEnv('SWEET_COOKIE_BROWSERS', 'edge');
-		vi.stubEnv('SWEET_COOKIE_EDGE_PROFILE', 'Default');
+		vi.stubEnv("SWEET_COOKIE_BROWSERS", "edge");
+		vi.stubEnv("SWEET_COOKIE_EDGE_PROFILE", "Default");
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
+			url: "https://chatgpt.com/",
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name)).toEqual(['edge']);
-		expect(edgeCapture.lastOptions).toMatchObject({ profile: 'Default' });
+		expect(res.cookies.map((c) => c.name)).toEqual(["edge"]);
+		expect(edgeCapture.lastOptions).toMatchObject({ profile: "Default" });
 	});
 
-	it('passes chromiumBrowser through to the chrome provider', async () => {
+	it("supports SWEET_COOKIE_SOURCES and falls back to SWEET_COOKIE_CHROME_PROFILE for edge", async () => {
 		vi.resetModules();
 
-		vi.doMock('../src/providers/chrome.js', () => ({
+		vi.doMock("../src/providers/edge.js", () => ({
+			getCookiesFromEdge: async (options: unknown) => {
+				edgeCapture.lastOptions = options;
+				return {
+					cookies: [{ name: "edge", value: "e", domain: "chatgpt.com", path: "/", secure: true }],
+					warnings: [],
+				};
+			},
+		}));
+
+		vi.stubEnv("SWEET_COOKIE_SOURCES", "edge");
+		vi.stubEnv("SWEET_COOKIE_CHROME_PROFILE", "Profile 7");
+
+		const { getCookies } = await import("../src/index.js");
+		const res = await getCookies({
+			url: "https://chatgpt.com/",
+			includeExpired: true,
+		});
+
+		expect(res.cookies.map((c) => c.name)).toEqual(["edge"]);
+		expect(edgeCapture.lastOptions).toMatchObject({ profile: "Profile 7" });
+	});
+
+	it("passes chromiumBrowser through to the chrome provider", async () => {
+		vi.resetModules();
+
+		vi.doMock("../src/providers/chrome.js", () => ({
 			getCookiesFromChrome: async (options: unknown) => {
 				chromeCapture.lastOptions = options;
 				return {
-					cookies: [{ name: 'chrome', value: 'c', domain: 'chatgpt.com', path: '/', secure: true }],
+					cookies: [{ name: "chrome", value: "c", domain: "chatgpt.com", path: "/", secure: true }],
 					warnings: [],
 				};
 			},
 		}));
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
-			browsers: ['chrome'],
-			chromiumBrowser: 'arc',
+			url: "https://chatgpt.com/",
+			browsers: ["chrome"],
+			chromiumBrowser: "arc",
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name)).toEqual(['chrome']);
-		expect(chromeCapture.lastOptions).toMatchObject({ chromiumBrowser: 'arc' });
+		expect(res.cookies.map((c) => c.name)).toEqual(["chrome"]);
+		expect(chromeCapture.lastOptions).toMatchObject({ chromiumBrowser: "arc" });
 	});
 
-	itIfDarwin('merges browser sources and dedupes by name+domain+path', async () => {
+	it("passes Safari-specific options through to the safari provider", async () => {
 		vi.resetModules();
 
-		const dir = mkdtempSync(path.join(tmpdir(), 'sweet-cookie-public-'));
+		vi.doMock("../src/providers/safariBinaryCookies.js", () => ({
+			getCookiesFromSafari: async (options: unknown) => {
+				safariCapture.lastOptions = options;
+				return {
+					cookies: [{ name: "safari", value: "s", domain: "chatgpt.com", path: "/" }],
+					warnings: [],
+				};
+			},
+		}));
 
-		const firefoxDir = path.join(dir, 'ff');
+		const { getCookies } = await import("../src/index.js");
+		const res = await getCookies({
+			url: "https://chatgpt.com/",
+			browsers: ["safari"],
+			includeExpired: true,
+			safariCookiesFile: "/tmp/Cookies.binarycookies",
+		});
+
+		expect(res.cookies.map((c) => c.name)).toEqual(["safari"]);
+		expect(safariCapture.lastOptions).toMatchObject({
+			file: "/tmp/Cookies.binarycookies",
+			includeExpired: true,
+		});
+	});
+
+	itIfDarwin("merges browser sources and dedupes by name+domain+path", async () => {
+		vi.resetModules();
+
+		const dir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-public-"));
+
+		const firefoxDir = path.join(dir, "ff");
 		mkdirSync(firefoxDir, { recursive: true });
-		writeFileSync(path.join(firefoxDir, 'cookies.sqlite'), '', 'utf8');
+		writeFileSync(path.join(firefoxDir, "cookies.sqlite"), "", "utf8");
 
 		nodeSqlite.rows = [
 			{
-				name: 'dup',
-				value: 'x',
-				host: '.chatgpt.com',
-				path: '/',
+				name: "dup",
+				value: "x",
+				host: ".chatgpt.com",
+				path: "/",
 				expiry: 9999999999,
 				isSecure: 0,
 				isHttpOnly: 0,
 				sameSite: 0,
 			},
 			{
-				name: 'firefox',
-				value: 'f',
-				host: '.chatgpt.com',
-				path: '/',
+				name: "firefox",
+				value: "f",
+				host: ".chatgpt.com",
+				path: "/",
 				expiry: 9999999999,
 				isSecure: 0,
 				isHttpOnly: 0,
@@ -216,41 +289,41 @@ describe('public API', () => {
 			},
 		];
 
-		vi.doMock('../src/providers/chrome.js', () => ({
+		vi.doMock("../src/providers/chrome.js", () => ({
 			getCookiesFromChrome: async () => ({
 				cookies: [
-					{ name: 'dup', value: 'x', domain: 'chatgpt.com', path: '/', secure: true },
-					{ name: 'chrome', value: 'c', domain: 'chatgpt.com', path: '/', secure: true },
+					{ name: "dup", value: "x", domain: "chatgpt.com", path: "/", secure: true },
+					{ name: "chrome", value: "c", domain: "chatgpt.com", path: "/", secure: true },
 				],
 				warnings: [],
 			}),
 		}));
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
-			browsers: ['chrome', 'firefox'],
+			url: "https://chatgpt.com/",
+			browsers: ["chrome", "firefox"],
 			firefoxProfile: firefoxDir,
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name).sort()).toEqual(['chrome', 'dup', 'firefox']);
+		expect(res.cookies.map((c) => c.name).sort()).toEqual(["chrome", "dup", "firefox"]);
 	});
 
-	it('mode=first returns the first non-empty browser result', async () => {
+	it("mode=first returns the first non-empty browser result", async () => {
 		vi.resetModules();
 
-		const dir = mkdtempSync(path.join(tmpdir(), 'sweet-cookie-public-first-'));
-		const firefoxDir = path.join(dir, 'ff');
+		const dir = mkdtempSync(path.join(tmpdir(), "sweet-cookie-public-first-"));
+		const firefoxDir = path.join(dir, "ff");
 		mkdirSync(firefoxDir, { recursive: true });
-		writeFileSync(path.join(firefoxDir, 'cookies.sqlite'), '', 'utf8');
+		writeFileSync(path.join(firefoxDir, "cookies.sqlite"), "", "utf8");
 
 		nodeSqlite.rows = [
 			{
-				name: 'only',
-				value: 'f',
-				host: '.chatgpt.com',
-				path: '/',
+				name: "only",
+				value: "f",
+				host: ".chatgpt.com",
+				path: "/",
 				expiry: 9999999999,
 				isSecure: 0,
 				isHttpOnly: 0,
@@ -258,40 +331,40 @@ describe('public API', () => {
 			},
 		];
 
-		const { getCookies } = await import('../src/index.js');
+		const { getCookies } = await import("../src/index.js");
 		const res = await getCookies({
-			url: 'https://chatgpt.com/',
-			mode: 'first',
-			browsers: ['firefox', 'chrome'],
+			url: "https://chatgpt.com/",
+			mode: "first",
+			browsers: ["firefox", "chrome"],
 			firefoxProfile: firefoxDir,
 			includeExpired: true,
 		});
 
-		expect(res.cookies.map((c) => c.name)).toEqual(['only']);
+		expect(res.cookies.map((c) => c.name)).toEqual(["only"]);
 	});
 
-	it('toCookieHeader() sorts and can dedupe by name', async () => {
-		const { toCookieHeader } = await import('../src/index.js');
+	it("toCookieHeader() sorts and can dedupe by name", async () => {
+		const { toCookieHeader } = await import("../src/index.js");
 		const header = toCookieHeader(
 			[
-				{ name: 'b', value: '2' },
-				{ name: 'a', value: '1' },
-				{ name: 'a', value: 'ignored' },
+				{ name: "b", value: "2" },
+				{ name: "a", value: "1" },
+				{ name: "a", value: "ignored" },
 			],
-			{ dedupeByName: true }
+			{ dedupeByName: true },
 		);
-		expect(header).toBe('a=1; b=2');
+		expect(header).toBe("a=1; b=2");
 	});
 
-	it('toCookieHeader() can preserve order', async () => {
-		const { toCookieHeader } = await import('../src/index.js');
+	it("toCookieHeader() can preserve order", async () => {
+		const { toCookieHeader } = await import("../src/index.js");
 		const header = toCookieHeader(
 			[
-				{ name: 'b', value: '2' },
-				{ name: 'a', value: '1' },
+				{ name: "b", value: "2" },
+				{ name: "a", value: "1" },
 			],
-			{ sort: 'none' }
+			{ sort: "none" },
 		);
-		expect(header).toBe('b=2; a=1');
+		expect(header).toBe("b=2; a=1");
 	});
 });

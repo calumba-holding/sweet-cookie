@@ -1,6 +1,7 @@
 # Release checklist (npm + GitHub)
 
 Target destinations:
+
 - npm: `@steipete/sweet-cookie` (library only; published from `packages/core`)
 - GitHub: tag + GitHub Release (notes)
 
@@ -18,6 +19,7 @@ Target destinations:
 - [ ] Git tag `v<version>`
 
 Helper:
+
 ```bash
 ver="$(node -p 'require(\"./packages/core/package.json\").version')"
 echo "$ver"
@@ -65,17 +67,20 @@ git push origin "v${ver}"
 ## 8) Publish to npm
 
 From `packages/core`:
+
 ```bash
 cd packages/core
 npm publish
 ```
 
 Verify:
+
 ```bash
 npm view @steipete/sweet-cookie version
 ```
 
 Smoke (fresh directory):
+
 ```bash
 rm -rf /tmp/sweet-cookie-smoke && mkdir -p /tmp/sweet-cookie-smoke
 cd /tmp/sweet-cookie-smoke
@@ -87,6 +92,7 @@ node -e "import { getCookies, toCookieHeader } from '@steipete/sweet-cookie'; co
 ## 9) GitHub Release (notes)
 
 Create release notes from `CHANGELOG.md` section:
+
 ```bash
 ver="$(node -p 'require(\"./packages/core/package.json\").version')"
 awk -v start="$ver" '
@@ -98,6 +104,7 @@ awk -v start="$ver" '
 ```
 
 Create the GitHub release:
+
 ```bash
 gh release create "v${ver}" \
   --title "v${ver}" \
@@ -105,7 +112,7 @@ gh release create "v${ver}" \
 ```
 
 Verify rendering (real newlines):
+
 ```bash
 gh release view "v${ver}" --json body --jq .body | head
 ```
-

@@ -3,17 +3,20 @@
 Small, dependency-light cookie extraction for local tooling.
 
 It’s built around two ideas:
-1) **Prefer inline cookies** when you can (most reliable, works everywhere).
-2) **Best-effort local reads** when you want zero-manual steps.
+
+1. **Prefer inline cookies** when you can (most reliable, works everywhere).
+2. **Best-effort local reads** when you want zero-manual steps.
 
 ## Why
 
 Browser cookies are hard in practice:
+
 - Profile databases can be locked while the browser is running.
 - Values may be encrypted (Keychain/DPAPI/keyring).
 - Native addons (`sqlite3`, `keytar`, …) are a constant source of rebuild/ABI pain across Node/Bun and CI.
 
 Sweet Cookie avoids native Node addons by design:
+
 - SQLite: `node:sqlite` (Node) or `bun:sqlite` (Bun)
 - OS integration: shelling out to platform tools with timeouts (`security`, `powershell`, `secret-tool`, `kwallet-query`)
 
@@ -46,12 +49,12 @@ pnpm i
 Minimal: read a couple cookies and build a header.
 
 ```ts
-import { getCookies, toCookieHeader } from '@steipete/sweet-cookie';
+import { getCookies, toCookieHeader } from "@steipete/sweet-cookie";
 
 const { cookies, warnings } = await getCookies({
-  url: 'https://example.com/',
-  names: ['session', 'csrf'],
-  browsers: ['chrome', 'edge', 'firefox', 'safari'],
+	url: "https://example.com/",
+	names: ["session", "csrf"],
+	browsers: ["chrome", "edge", "firefox", "safari"],
 });
 
 for (const warning of warnings) console.warn(warning);
@@ -63,11 +66,11 @@ Multiple origins (common with OAuth / SSO redirects):
 
 ```ts
 const { cookies } = await getCookies({
-  url: 'https://app.example.com/',
-  origins: ['https://accounts.example.com/', 'https://login.example.com/'],
-  names: ['session', 'xsrf'],
-  browsers: ['chrome'],
-  mode: 'merge',
+	url: "https://app.example.com/",
+	origins: ["https://accounts.example.com/", "https://login.example.com/"],
+	names: ["session", "xsrf"],
+	browsers: ["chrome"],
+	mode: "merge",
 });
 ```
 
@@ -75,9 +78,9 @@ Pick a specific profile or pass an explicit Chrome cookie DB path:
 
 ```ts
 await getCookies({
-  url: 'https://example.com/',
-  browsers: ['chrome'], // or ['edge']
-  chromeProfile: 'Default', // or '/path/to/.../Network/Cookies'
+	url: "https://example.com/",
+	browsers: ["chrome"], // or ['edge']
+	chromeProfile: "Default", // or '/path/to/.../Network/Cookies'
 });
 ```
 
@@ -85,9 +88,9 @@ Target a specific Chromium-family browser on macOS:
 
 ```ts
 await getCookies({
-  url: 'https://example.com/',
-  browsers: ['chrome'],
-  chromiumBrowser: 'arc', // 'chrome' | 'brave' | 'arc' | 'chromium'
+	url: "https://example.com/",
+	browsers: ["chrome"],
+	chromiumBrowser: "arc", // 'chrome' | 'brave' | 'arc' | 'chromium'
 });
 ```
 
@@ -95,9 +98,9 @@ Pick a specific Edge profile or pass an explicit Edge cookie DB path:
 
 ```ts
 await getCookies({
-  url: 'https://example.com/',
-  browsers: ['edge'],
-  edgeProfile: 'Default', // or '/path/to/.../Network/Cookies'
+	url: "https://example.com/",
+	browsers: ["edge"],
+	edgeProfile: "Default", // or '/path/to/.../Network/Cookies'
 });
 ```
 
@@ -105,9 +108,9 @@ Inline cookies (works on any OS/runtime; no browser DB access required):
 
 ```ts
 await getCookies({
-  url: 'https://example.com/',
-  browsers: ['chrome'],
-  inlineCookiesFile: '/path/to/cookies.json', // or inlineCookiesJson / inlineCookiesBase64
+	url: "https://example.com/",
+	browsers: ["chrome"],
+	inlineCookiesFile: "/path/to/cookies.json", // or inlineCookiesJson / inlineCookiesBase64
 });
 ```
 

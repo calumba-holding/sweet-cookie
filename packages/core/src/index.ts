@@ -1,4 +1,4 @@
-export { getCookies, toCookieHeader } from './public.js';
+export { getCookies, toCookieHeader } from "./public.js";
 export type {
 	BrowserName,
 	Cookie,
@@ -7,4 +7,4 @@ export type {
 	CookieSameSite,
 	GetCookiesOptions,
 	GetCookiesResult,
-} from './types.js';
+} from "./types.js";
