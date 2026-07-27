@@ -68,12 +68,18 @@ export async function getCookiesFromChromeSqliteMac(
 	origins: string[],
 	allowlistNames: Set<string> | null,
 ): Promise<GetCookiesResult> {
-	const dbs = resolveChromeCookiesDbs(options.profile, options.chromiumBrowser);
+	const pathWarnings = new Set<string>();
+	const dbs = resolveChromeCookiesDbs(options.profile, options.chromiumBrowser, pathWarnings);
 	if (!dbs.length) {
-		return { cookies: [], warnings: ["Chrome cookies database not found."] };
+		return {
+			cookies: [],
+			warnings: pathWarnings.size
+				? Array.from(pathWarnings)
+				: ["Chrome cookies database not found."],
+		};
 	}
 
-	const warnings: string[] = [];
+	const warnings = Array.from(pathWarnings);
 	const cookies: Cookie[] = [];
 	for (const db of dbs) {
 		// On macOS, Chromium stores its "Safe Storage" secret in Keychain.
@@ -153,6 +159,7 @@ function resolveKeychainForDb(dbPath: string): {
 function resolveChromeCookiesDbs(
 	profile?: ChromiumProfileSelector,
 	chromiumBrowser?: ChromiumBrowserId,
+	warnings?: Set<string>,
 ): ResolvedCookiesDb[] {
 	const home = homedir();
 	const selectedTargets = chromiumBrowser
@@ -166,6 +173,7 @@ function resolveChromeCookiesDbs(
 				)
 			: [];
 	const args: Parameters<typeof resolveCookiesDbsFromProfileOrRoots>[0] = { roots };
+	args.onWarning = (warning) => warnings?.add(warning);
 	if (profile !== undefined) {
 		args.profile = profile;
 	}
