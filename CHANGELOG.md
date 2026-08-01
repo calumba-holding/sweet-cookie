@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Update the pnpm, Vite, Oxfmt, Oxlint, and type-aware linting toolchain to their latest stable releases.
 - Update the repository toolchain to pnpm 11.12 and Node 22.13 or newer for current install hardening.
 
 ### Fixed
