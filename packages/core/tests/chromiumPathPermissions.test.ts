@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fsMocks = vi.hoisted(() => ({
+	errorCode: "EPERM",
 	readdirSync: vi.fn(() => {
-		throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+		throw Object.assign(new Error("permission denied"), { code: fsMocks.errorCode });
 	}),
 	readFileSync: vi.fn(() => {
-		throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+		throw Object.assign(new Error("permission denied"), { code: fsMocks.errorCode });
 	}),
 }));
 
@@ -22,7 +23,12 @@ import {
 } from "../src/providers/chromium/paths.js";
 
 describe("Chromium path permissions", () => {
-	it("reports permission errors during all-profile discovery", () => {
+	beforeEach(() => {
+		fsMocks.errorCode = "EPERM";
+	});
+
+	it.each(["EPERM", "EACCES"])("reports %s during all-profile discovery", (errorCode) => {
+		fsMocks.errorCode = errorCode;
 		const warnings: string[] = [];
 		const root = "/protected/chrome";
 
@@ -34,5 +40,18 @@ describe("Chromium path permissions", () => {
 
 		expect(databases).toEqual([]);
 		expect(warnings).toEqual([`Permission denied reading Chromium profile data at ${root}.`]);
+	});
+
+	it("does not turn unrelated filesystem failures into permission warnings", () => {
+		fsMocks.errorCode = "ENOENT";
+		const warnings: string[] = [];
+
+		resolveCookiesDbsFromProfileOrRoots({
+			profile: ALL_CHROMIUM_PROFILES,
+			roots: ["/missing/chrome"],
+			onWarning: (warning) => warnings.push(warning),
+		});
+
+		expect(warnings).toEqual([]);
 	});
 });

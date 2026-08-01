@@ -228,4 +228,57 @@ describe("chrome sqlite (mac) keychain selection", () => {
 		);
 		expect(getCookiesFromChromeSqliteDb).toHaveBeenCalled();
 	});
+
+	itIfDarwin("preserves permission warnings alongside readable Chromium results", async () => {
+		vi.resetModules();
+
+		const warning =
+			"Permission denied reading Chromium profile data at /Users/test/Library/Application Support/BraveSoftware/Brave-Browser.";
+		const readKeychainGenericPasswordFirst = vi
+			.fn()
+			.mockResolvedValue({ ok: true, password: "pw" });
+		const cookie = {
+			name: "sid",
+			value: "value",
+			domain: "example.com",
+			path: "/",
+		};
+		const getCookiesFromChromeSqliteDb = vi
+			.fn()
+			.mockResolvedValue({ cookies: [cookie], warnings: [] });
+		const resolveCookiesDbsFromProfileOrRoots = vi.fn(
+			(options: { onWarning?: (message: string) => void }) => {
+				options.onWarning?.(warning);
+				return [
+					{
+						dbPath: "/Users/test/Library/Application Support/Google/Chrome/Default/Cookies",
+						profile: "Default",
+					},
+				];
+			},
+		);
+
+		vi.doMock("../src/providers/chromium/macosKeychain.js", () => ({
+			readKeychainGenericPasswordFirst,
+		}));
+		vi.doMock("../src/providers/chromium/paths.js", () => ({
+			resolveCookiesDbsFromProfileOrRoots,
+		}));
+		vi.doMock("../src/providers/chromeSqlite/shared.js", () => ({
+			getCookiesFromChromeSqliteDb,
+		}));
+		vi.doMock("../src/providers/chromeSqlite/crypto.js", () => ({
+			decryptChromiumAes128CbcCookieValue: vi.fn(),
+			deriveAes128CbcKeyFromPassword: () => new Uint8Array(),
+		}));
+
+		const { getCookiesFromChromeSqliteMac } = await import("../src/providers/chromeSqliteMac.js");
+		const result = await getCookiesFromChromeSqliteMac(
+			{ profile: "Default" },
+			["https://example.com"],
+			null,
+		);
+
+		expect(result).toEqual({ cookies: [cookie], warnings: [warning] });
+	});
 });
