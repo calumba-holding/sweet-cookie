@@ -61,8 +61,8 @@ export function resolveCookiesDbsFromProfileOrRoots(options) {
             continue;
         }
         const profileDirs = requestedProfile
-            ? resolveProfileDirNames(root, requestedProfile)
-            : discoverProfileDirNames(root);
+            ? resolveProfileDirNames(root, requestedProfile, options.onWarning)
+            : discoverProfileDirNames(root, options.onWarning);
         for (const profileDir of profileDirs) {
             const dbPath = resolveCookiesDbInProfileDir(path.join(root, profileDir), options.cookieStoreOrder);
             if (dbPath) {
@@ -76,9 +76,9 @@ export function resolveCookiesDbsFromProfileOrRoots(options) {
     }
     return dedupeResolvedDbs(resolved);
 }
-function resolveProfileDirNames(root, profile) {
+function resolveProfileDirNames(root, profile, onWarning) {
     const names = [profile];
-    const aliases = readChromiumProfileAliases(root);
+    const aliases = readChromiumProfileAliases(root, onWarning);
     for (const [profileDir, displayName] of aliases) {
         if (displayName === profile && !names.includes(profileDir)) {
             names.push(profileDir);
@@ -86,14 +86,21 @@ function resolveProfileDirNames(root, profile) {
     }
     return names;
 }
-function discoverProfileDirNames(root) {
+function discoverProfileDirNames(root, onWarning) {
+    const seenWarnings = new Set();
+    const reportWarning = (warning) => {
+        if (!seenWarnings.has(warning)) {
+            seenWarnings.add(warning);
+            onWarning?.(warning);
+        }
+    };
     const names = [];
-    for (const profileDir of readChromiumProfileAliases(root).keys()) {
+    for (const profileDir of readChromiumProfileAliases(root, reportWarning).keys()) {
         if (!names.includes(profileDir)) {
             names.push(profileDir);
         }
     }
-    for (const entry of safeReaddir(root)) {
+    for (const entry of safeReaddir(root, reportWarning)) {
         const profileDir = path.join(root, entry);
         if (resolveCookiesDbInProfileDir(profileDir) && !names.includes(entry)) {
             names.push(entry);
@@ -101,7 +108,7 @@ function discoverProfileDirNames(root) {
     }
     return names;
 }
-function readChromiumProfileAliases(root) {
+function readChromiumProfileAliases(root, onWarning) {
     try {
         const localState = JSON.parse(readFileSync(path.join(root, "Local State"), "utf8"));
         const infoCache = typeof localState === "object" && localState !== null
@@ -122,7 +129,8 @@ function readChromiumProfileAliases(root) {
         }
         return aliases;
     }
-    catch {
+    catch (error) {
+        reportPermissionError(error, root, onWarning);
         return new Map();
     }
 }
@@ -137,14 +145,21 @@ function resolveCookiesDbInProfileDir(profileDir, order = "legacy-first") {
     }
     return null;
 }
-function safeReaddir(dir) {
+function safeReaddir(dir, onWarning) {
     try {
         return readdirSync(dir, { withFileTypes: true })
             .filter((entry) => entry.isDirectory())
             .map((entry) => entry.name);
     }
-    catch {
+    catch (error) {
+        reportPermissionError(error, dir, onWarning);
         return [];
+    }
+}
+function reportPermissionError(error, pathValue, onWarning) {
+    const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+    if (code === "EPERM" || code === "EACCES") {
+        onWarning?.(`Permission denied reading Chromium profile data at ${pathValue}.`);
     }
 }
 export function profileNameFromDbPath(dbPath) {
