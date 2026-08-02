@@ -50,7 +50,7 @@ The CLI accepts a domain or full URL, uses the same browser/profile/env behavior
 
 ## Install (repo/dev)
 
-Repository development uses pnpm 11.12 and requires Node `>=22.13`. The published library remains compatible with Node `>=22`.
+Repository development uses pnpm 11.18 and requires Node `>=22.13`. The published library remains compatible with Node `>=22`.
 
 ```bash
 pnpm i
