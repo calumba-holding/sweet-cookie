@@ -1,14 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.4.2 - 2026-08-28
 
 ### Fixed
 
-- Document how to build and load the Chrome extension from `apps/extension/dist` without moving source files. (`#41`, thanks `@YOSI-COHEN`)
+- Fix the Chrome extension setup guide: build first, then load `apps/extension/dist` in Chrome without moving source files. (`#45`, fixes `#41`, thanks `@YOSI-COHEN`)
 
 ### Changed
 
-- Update pnpm, the pnpm setup action, Node and Chrome types, Vitest, Vite, Oxfmt, Oxlint, and esbuild to their latest stable releases.
+- Clarify installation, CLI usage, browser support, and profile selection in the README and full usage guide. (`#39`)
+- Refresh development dependencies and CI tooling, including pnpm, TypeScript, and the test, lint, and build tools. (`#44`)
 
 ## 0.4.1 - 2026-08-01
 
