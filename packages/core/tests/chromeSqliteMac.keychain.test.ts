@@ -3,6 +3,40 @@ import { describe, expect, it, vi } from "vitest";
 const itIfDarwin = process.platform === "darwin" ? it : it.skip;
 
 describe("chrome sqlite (mac) keychain selection", () => {
+	it("binds every generic custom profile path to its explicit Chromium browser", async () => {
+		vi.resetModules();
+		const { resolveKeychainForDb } = await import("../src/providers/chromeSqliteMac.js");
+
+		const expected = {
+			chrome: {
+				account: "Chrome",
+				services: ["Chrome Safe Storage"],
+				label: "Chrome Safe Storage",
+			},
+			brave: {
+				account: "Brave",
+				services: ["Brave Safe Storage"],
+				label: "Brave Safe Storage",
+			},
+			arc: {
+				account: "Arc",
+				services: ["Arc Safe Storage"],
+				label: "Arc Safe Storage",
+			},
+			chromium: {
+				account: "Chromium",
+				services: ["Chromium Safe Storage"],
+				label: "Chromium Safe Storage",
+			},
+		} as const;
+
+		for (const browser of Object.keys(expected) as (keyof typeof expected)[]) {
+			expect(
+				resolveKeychainForDb(`/private/custom-profile-${browser}/Default/Cookies`, browser),
+			).toEqual(expected[browser]);
+		}
+	});
+
 	it("passes timeoutMs through to the Keychain lookup", async () => {
 		vi.resetModules();
 
@@ -133,7 +167,7 @@ describe("chrome sqlite (mac) keychain selection", () => {
 		expect(getCookiesFromChromeSqliteDb).toHaveBeenCalled();
 	});
 
-	itIfDarwin("searches only the targeted Chromium root when chromiumBrowser is set", async () => {
+	itIfDarwin("binds the targeted Chromium root and Keychain for a custom path", async () => {
 		vi.resetModules();
 
 		const readKeychainGenericPasswordFirst = vi
@@ -142,7 +176,7 @@ describe("chrome sqlite (mac) keychain selection", () => {
 		const getCookiesFromChromeSqliteDb = vi.fn().mockResolvedValue({ cookies: [], warnings: [] });
 		const resolveCookiesDbsFromProfileOrRoots = vi.fn().mockReturnValue([
 			{
-				dbPath: "/Users/test/Library/Application Support/Arc/User Data/Default/Cookies",
+				dbPath: "/private/custom-profile/Default/Cookies",
 				profile: "Default",
 			},
 		]);

@@ -8,4 +8,9 @@ export declare function getCookiesFromChromeSqliteMac(options: {
     timeoutMs?: number;
     chromiumBrowser?: ChromiumBrowserId;
 }, origins: string[], allowlistNames: Set<string> | null): Promise<GetCookiesResult>;
+export declare function resolveKeychainForDb(dbPath: string, chromiumBrowser?: ChromiumBrowserId): {
+    account: string;
+    services: string[];
+    label: string;
+};
 //# sourceMappingURL=chromeSqliteMac.d.ts.map

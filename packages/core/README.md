@@ -62,6 +62,7 @@ Notes:
 
 - `profile` is a shared alias for `chromeProfile` / `edgeProfile`.
 - `chromiumBrowser` pins the macOS or Linux `chrome` backend to `chrome`, `brave`, `arc`, or `chromium`; Arc is macOS-only.
+- On macOS, `chromiumBrowser` also selects the matching Keychain entry, including for custom profile paths.
 - Inline payloads win first; otherwise local backends run in declared order.
 - On Windows, Brave and other Chromium-family profiles work via an explicit `chromeProfile` path.
 - `edgeProfile` falls back to `SWEET_COOKIE_CHROME_PROFILE` when `SWEET_COOKIE_EDGE_PROFILE` is unset.

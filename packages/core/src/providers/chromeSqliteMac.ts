@@ -84,7 +84,7 @@ export async function getCookiesFromChromeSqliteMac(
 	for (const db of dbs) {
 		// On macOS, Chromium stores its "Safe Storage" secret in Keychain.
 		// `security find-generic-password` is stable and avoids any native Node keychain modules.
-		const keychain = resolveKeychainForDb(db.dbPath);
+		const keychain = resolveKeychainForDb(db.dbPath, options.chromiumBrowser);
 		const passwordResult = await readKeychainGenericPasswordFirst({
 			account: keychain.account,
 			services: keychain.services,
@@ -142,11 +142,20 @@ export async function getCookiesFromChromeSqliteMac(
 	return { cookies, warnings };
 }
 
-function resolveKeychainForDb(dbPath: string): {
+export function resolveKeychainForDb(
+	dbPath: string,
+	chromiumBrowser?: ChromiumBrowserId,
+): {
 	account: string;
 	services: string[];
 	label: string;
 } {
+	if (chromiumBrowser !== undefined) {
+		const selected = CHROMIUM_BROWSER_TARGETS.find((target) => target.id === chromiumBrowser);
+		if (selected !== undefined) {
+			return selected.keychain;
+		}
+	}
 	const lower = dbPath.toLowerCase();
 	for (const target of CHROMIUM_BROWSER_TARGETS) {
 		if (lower.includes(target.root.toLowerCase())) {
