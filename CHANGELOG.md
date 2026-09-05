@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.4.4 - Unreleased
+
 ## 0.4.3 - 2026-09-05
 
 **Highlights:** Correct cookie scope and isolation, Dia support on macOS, and improved Linux profile discovery and macOS Keychain selection.
